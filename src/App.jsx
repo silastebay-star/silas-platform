@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import mapboxgl from "mapbox-gl";
 import Papa from "papaparse";
 import * as toGeoJSON from "@mapbox/togeojson";
@@ -13,8 +13,8 @@ import { Progress } from '@/components/ui/progress.jsx';
 import silasLogo from './assets/silas-logo.png';
 import './App.css';
 
-const MAPBOX_TOKEN = "pk.eyJ1Ijoic2lsYXN0ZWJheSIsImEiOiJjbWdhemRoanIwdm5nMm5yMGtueXBhbmcxIn0.vJn_5sGNt1X4QM4Je7wPFg";
-const MAPBOX_STYLE = "mapbox://styles/silastebay/cmgff34w9000v01pebcy24k4l";
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || "pk.eyJ1Ijoic2lsYXN0ZWJheSIsImEiOiJjbWdhemRoanIwdm5nMm5yMGtueXBhbmcxIn0.vJn_5sGNt1X4QM4Je7wPFg";
+const MAPBOX_STYLE = import.meta.env.VITE_MAPBOX_STYLE || "mapbox://styles/silastebay/cmgff34w9000v01pebcy24k4l";
 
 const LAYER_CONFIG = {
   All: { color: "#4c764c", id: "all", icon: MapPin },
@@ -705,25 +705,9 @@ function PageOverlay({ layer, onClose, onFlyTo, onSelectFeature, onShowMetrics, 
   );
 }
 
-// Dynamic Social Feed Component
-function DynamicSocialFeed({ pins, onItemClick, activeLayer }) {
-  const [sortBy, setSortBy] = useState("recent"); // "recent" or "trending"
-
-  const generateFeedItems = (pins) => {
-    return pins.map(pin => ({
-      id: pin.id,
-      type: pin.layer?.toLowerCase() || 'general',
-      title: `${pin.name} - ${getLayerAction(pin.layer)}`,
-      excerpt: pin.description || "No description available",
-      coords: pin.coordinates,
-      featureName: pin.name,
-      layer: pin.layer,
-      reactions: pin.feedback?.[0]?.count || 0,
-      comments: pin.comments?.[0]?.count || 0,
-      created_at: pin.created_at,
-      recent_activity: pin.updated_at || pin.created_at
-    }));
-  };
+// Social Feed Component
+function SocialFeedContent({ pins, activeLayer, onItemClick }) {
+  const [sortBy, setSortBy] = useState("recent");
 
   const getLayerAction = (layer) => {
     const actions = {
@@ -738,18 +722,105 @@ function DynamicSocialFeed({ pins, onItemClick, activeLayer }) {
     return actions[layer] || 'Update';
   };
 
-  const sortedFeedItems = generateFeedItems(pins).sort((a, b) => {
-    if (sortBy === "trending") {
-      return (b.reactions + b.comments) - (a.reactions + a.comments);
-    }
-    return new Date(b.recent_activity) - new Date(a.recent_activity);
-  });
+  const feedItems = useMemo(() => {
+    const items = pins.map(pin => ({
+      id: pin.id,
+      type: pin.layer?.toLowerCase() || 'general',
+      title: `${pin.name} - ${getLayerAction(pin.layer)}`,
+      excerpt: pin.description || "No description available",
+      coords: pin.coordinates,
+      featureName: pin.name,
+      layer: pin.layer,
+      reactions: pin.feedback?.[0]?.count || 0,
+      comments: pin.comments?.[0]?.count || 0,
+      created_at: pin.created_at,
+      recent_activity: pin.updated_at || pin.created_at
+    }));
 
-  const filteredItems = activeLayer === "All"
-    ? sortedFeedItems
-    : sortedFeedItems.filter(item => item.layer === activeLayer);
+    const sorted = items.sort((a, b) => {
+      if (sortBy === "trending") {
+        return (b.reactions + b.comments) - (a.reactions + a.comments);
+      }
+      return new Date(b.recent_activity) - new Date(a.recent_activity);
+    });
 
-  return { feedItems: filteredItems.slice(0, 10), sortBy, setSortBy };
+    const filtered = activeLayer === "All"
+      ? sorted
+      : sorted.filter(item => item.layer === activeLayer);
+
+    return filtered.slice(0, 10);
+  }, [pins, activeLayer, sortBy]);
+
+  return { feedItems, sortBy, setSortBy };
+}
+
+// Social Feed Modal Component
+function SocialFeedModal({ pins, activeLayer, onItemClick }) {
+  const { feedItems, sortBy, setSortBy } = SocialFeedContent({ pins, activeLayer, onItemClick });
+
+  return (
+    <Card className="absolute top-24 left-1/2 -translate-x-1/2 z-30 w-[600px] max-h-[calc(100vh-140px)] overflow-y-auto bg-white/95 backdrop-blur-md shadow-2xl border-2 animate-in fade-in slide-in-from-top-4 duration-300">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="flex items-center gap-2" style={{ color: LAYER_CONFIG[activeLayer]?.color }}>
+            <MessageCircle size={20} />
+            Community Feed {activeLayer !== "All" && `- ${activeLayer}`}
+          </CardTitle>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant={sortBy === "recent" ? "default" : "outline"}
+              onClick={() => setSortBy("recent")}
+              className="text-xs"
+            >
+              Recent
+            </Button>
+            <Button
+              size="sm"
+              variant={sortBy === "trending" ? "default" : "outline"}
+              onClick={() => setSortBy("trending")}
+              className="text-xs"
+            >
+              Trending
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          {feedItems.length === 0 ? (
+            <div className="text-center text-gray-500 py-8">
+              <MessageCircle size={48} className="mx-auto mb-4 opacity-50" />
+              <div className="font-medium">No posts yet</div>
+              <div className="text-sm">Be the first to add content to this layer!</div>
+            </div>
+          ) : (
+            feedItems.map((item) => (
+              <div key={item.id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => onItemClick(item)}>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="font-semibold text-gray-900 mb-1">{item.title}</div>
+                    <div className="text-sm text-gray-600 mb-2 line-clamp-2">{item.excerpt}</div>
+                    <div className="flex items-center gap-4 text-xs text-gray-500">
+                      <span className="flex items-center gap-1"><MapPin size={12} />{item.featureName}</span>
+                      <span className="flex items-center gap-1"><ThumbsUp size={12} />{item.reactions} reactions</span>
+                      <span className="flex items-center gap-1"><MessageCircle size={12} />{item.comments} comments</span>
+                    </div>
+                  </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: LAYER_CONFIG[item.layer]?.color }} />
+                    <div className="text-xs text-gray-400">
+                      {new Date(item.recent_activity).toLocaleDateString()}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  );
 }
 
 // Community Metrics Dashboard Component
@@ -1083,73 +1154,13 @@ export default function SilasPlatform() {
         </nav>
       </header>
 
-      {viewMode === "social" && (() => {
-        const { feedItems, sortBy, setSortBy } = DynamicSocialFeed({ pins: socialFeedPins, onItemClick: handleFeedItemClick, activeLayer });
-
-        return (
-          <Card className="absolute top-24 left-1/2 -translate-x-1/2 z-30 w-[600px] max-h-[calc(100vh-140px)] overflow-y-auto bg-white/95 backdrop-blur-md shadow-2xl border-2 animate-in fade-in slide-in-from-top-4 duration-300">
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="flex items-center gap-2" style={{ color: LAYER_CONFIG[activeLayer]?.color }}>
-                  <MessageCircle size={20} />
-                  Community Feed {activeLayer !== "All" && `- ${activeLayer}`}
-                </CardTitle>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant={sortBy === "recent" ? "default" : "outline"}
-                    onClick={() => setSortBy("recent")}
-                    className="text-xs"
-                  >
-                    Recent
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={sortBy === "trending" ? "default" : "outline"}
-                    onClick={() => setSortBy("trending")}
-                    className="text-xs"
-                  >
-                    Trending
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {feedItems.length === 0 ? (
-                  <div className="text-center text-gray-500 py-8">
-                    <MessageCircle size={48} className="mx-auto mb-4 opacity-50" />
-                    <div className="font-medium">No posts yet</div>
-                    <div className="text-sm">Be the first to add content to this layer!</div>
-                  </div>
-                ) : (
-                  feedItems.map((item) => (
-                    <div key={item.id} className="p-4 border rounded-lg hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => handleFeedItemClick(item)}>
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <div className="font-semibold text-gray-900 mb-1">{item.title}</div>
-                          <div className="text-sm text-gray-600 mb-2 line-clamp-2">{item.excerpt}</div>
-                          <div className="flex items-center gap-4 text-xs text-gray-500">
-                            <span className="flex items-center gap-1"><MapPin size={12} />{item.featureName}</span>
-                            <span className="flex items-center gap-1"><ThumbsUp size={12} />{item.reactions} reactions</span>
-                            <span className="flex items-center gap-1"><MessageCircle size={12} />{item.comments} comments</span>
-                          </div>
-                        </div>
-                        <div className="flex flex-col items-end gap-2">
-                          <div className="w-3 h-3 rounded-full" style={{ backgroundColor: LAYER_CONFIG[item.layer]?.color }} />
-                          <div className="text-xs text-gray-400">
-                            {new Date(item.recent_activity).toLocaleDateString()}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })()}
+      {viewMode === "social" && (
+        <SocialFeedModal
+          pins={socialFeedPins}
+          activeLayer={activeLayer}
+          onItemClick={handleFeedItemClick}
+        />
+      )}
 
       {selectedFeature && viewMode === "map" && (
         <Card className="absolute top-24 right-6 z-30 w-[420px] bg-white/98 backdrop-blur-md shadow-2xl border-2 animate-in fade-in slide-in-from-right-4 duration-300" style={{ borderColor: LAYER_CONFIG[selectedFeature.properties?.layer || "Economy"]?.color }}>
@@ -1336,7 +1347,7 @@ export default function SilasPlatform() {
       )}
 
       {openPage && (
-        <div className="absolute top-0 right-0 z-40 h-full w-[450px] bg-white/95 backdrop-blur-md shadow-2xl border-l-2 animate-in slide-in-from-right-5 duration-300" style={{ borderColor: LAYER_CONFIG[openPage]?.color }}>
+        <Card className="absolute top-24 left-4 z-40 w-[400px] max-h-[calc(100vh-140px)] overflow-y-auto bg-white/95 backdrop-blur-md shadow-2xl border-2 animate-in fade-in slide-in-from-left-4 duration-300" style={{ borderColor: LAYER_CONFIG[openPage]?.color }}>
           <PageOverlay
             layer={openPage}
             onClose={() => setOpenPage(null)}
@@ -1346,7 +1357,7 @@ export default function SilasPlatform() {
             onPinAction={handlePinAction}
             onVote={handleVote}
           />
-        </div>
+        </Card>
       )}
 
       <footer className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 text-xs text-gray-600 bg-white/80 backdrop-blur-sm px-6 py-2 rounded-full shadow-md">
