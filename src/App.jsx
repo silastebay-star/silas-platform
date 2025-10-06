@@ -24,7 +24,8 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN ||
 
 const MAPBOX_STYLE = import.meta.env.VITE_MAPBOX_STYLE ||
                      process.env.VITE_MAPBOX_STYLE ||
-                     "mapbox://styles/silastebay/cmgff34w9000v01pebcy24k4l";
+                     "mapbox://styles/silastebay/cmgff34w9000v01pebcy24k4l" ||
+                     "mapbox://styles/mapbox/streets-v12"; // Fallback to standard style
 
 // Debug logging for production
 if (typeof window !== 'undefined') {
@@ -49,6 +50,7 @@ function MapboxCentral({ mapData, kmlUrl, onSelect, mapApiRef, activeLayer, onRi
   const mapRef = useRef(null);
   const boundaryPolygonRef = useRef(null);
   const [contextMenu, setContextMenu] = useState(null);
+  const [mapLoaded, setMapLoaded] = useState(false);
 
   useEffect(() => {
     mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -133,11 +135,36 @@ function MapboxCentral({ mapData, kmlUrl, onSelect, mapApiRef, activeLayer, onRi
   useEffect(() => {
     if (!mapContainer.current) return;
 
+    // Set Mapbox access token
+    mapboxgl.accessToken = MAPBOX_TOKEN;
+
     const map = new mapboxgl.Map({
       container: mapContainer.current,
       style: MAPBOX_STYLE,
-      center: [-2.3769, 53.5526],
-      zoom: 13,
+      center: [-2.3769, 53.5526], // Stoneclough, Bolton coordinates
+      zoom: 15,
+      maxZoom: 18,
+      minZoom: 12
+    });
+
+    // Add error handling for map
+    map.on('error', (e) => {
+      console.error('Mapbox error:', e);
+    });
+
+    map.on('load', () => {
+      console.log('Map loaded successfully');
+      setMapLoaded(true);
+
+      // Add navigation controls
+      map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+
+      // Set bounds to keep map focused on Stoneclough area
+      const stonecloughBounds = [
+        [-2.4000, 53.5400], // Southwest coordinates
+        [-2.3500, 53.5650]  // Northeast coordinates
+      ];
+      map.setMaxBounds(stonecloughBounds);
     });
 
     if (mapApiRef) {
@@ -325,6 +352,16 @@ function MapboxCentral({ mapData, kmlUrl, onSelect, mapApiRef, activeLayer, onRi
   return (
     <div className="relative h-full w-full">
       <div ref={mapContainer} className="absolute inset-0 z-0" />
+
+      {/* Map loading indicator */}
+      {!mapLoaded && (
+        <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-100">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+            <p className="text-sm text-gray-600">Loading Stoneclough Map...</p>
+          </div>
+        </div>
+      )}
       
       {contextMenu && (
         <div 
