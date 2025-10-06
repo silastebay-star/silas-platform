@@ -28,12 +28,11 @@ const LAYER_CONFIG = {
 };
 
 // MapboxCentral Component now accepts GeoJSON data directly
-function MapboxCentral({ mapData, kmlUrl, onSelect, mapApiRef, activeLayer, onRightClick }) {
+function MapboxCentral({ mapData, kmlUrl, onSelect, mapApiRef, activeLayer, onRightClick, boundsWarning, setBoundsWarning }) {
   const mapContainer = useRef(null);
   const mapRef = useRef(null);
   const boundaryPolygonRef = useRef(null);
   const [contextMenu, setContextMenu] = useState(null);
-  const [boundsWarning, setBoundsWarning] = useState(null);
 
   useEffect(() => {
     mapboxgl.accessToken = MAPBOX_TOKEN;
@@ -884,6 +883,7 @@ export default function SilasPlatform() {
   const [mapData, setMapData] = useState({ type: "FeatureCollection", features: [] });
   const [socialFeedPins, setSocialFeedPins] = useState([]);
   const [showMetrics, setShowMetrics] = useState(null);
+  const [boundsWarning, setBoundsWarning] = useState(null);
 
   const geojsonPath = "/data/stoneclough_1759579511516.geojson";
   const csvPath = "/data/custom_area_data_1759579511516.csv";
@@ -1034,13 +1034,15 @@ export default function SilasPlatform() {
 
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-gray-100">
-      <MapboxCentral 
-        mapData={mapData} 
-        kmlUrl={kmlPath} 
-        onSelect={openFeaturePage} 
-        mapApiRef={mapApiRef} 
-        activeLayer={activeLayer} 
+      <MapboxCentral
+        mapData={mapData}
+        kmlUrl={kmlPath}
+        onSelect={openFeaturePage}
+        mapApiRef={mapApiRef}
+        activeLayer={activeLayer}
         onRightClick={handleRightClick}
+        boundsWarning={boundsWarning}
+        setBoundsWarning={setBoundsWarning}
       />
 
       {/* UI Components */}
