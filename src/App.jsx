@@ -22,10 +22,8 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN ||
 // Census data integration is properly imported and ready for use
 // Build timestamp: 2025-01-06 21:15 UTC - Import fix applied
 
-const MAPBOX_STYLE = import.meta.env.VITE_MAPBOX_STYLE ||
-                     process.env.VITE_MAPBOX_STYLE ||
-                     "mapbox://styles/silastebay/cmgff34w9000v01pebcy24k4l" ||
-                     "mapbox://styles/mapbox/streets-v12"; // Fallback to standard style
+// Use reliable Mapbox style - fallback to standard if custom fails
+const MAPBOX_STYLE = "mapbox://styles/mapbox/streets-v12"; // Reliable standard style
 
 // Debug logging for production
 if (typeof window !== 'undefined') {
@@ -147,13 +145,23 @@ function MapboxCentral({ mapData, kmlUrl, onSelect, mapApiRef, activeLayer, onRi
       minZoom: 12
     });
 
-    // Add error handling for map
+    // Add comprehensive error handling for map
     map.on('error', (e) => {
       console.error('Mapbox error:', e);
+      // Try to reload with fallback style if there's a style error
+      if (e.error && e.error.message && e.error.message.includes('style')) {
+        console.log('Style error detected, attempting fallback...');
+        map.setStyle('mapbox://styles/mapbox/streets-v11');
+      }
+    });
+
+    map.on('styledata', () => {
+      console.log('Map style loaded successfully');
     });
 
     map.on('load', () => {
       console.log('Map loaded successfully');
+      console.log('Map container dimensions:', mapContainer.current?.offsetWidth, 'x', mapContainer.current?.offsetHeight);
       setMapLoaded(true);
 
       // Add navigation controls
@@ -165,6 +173,18 @@ function MapboxCentral({ mapData, kmlUrl, onSelect, mapApiRef, activeLayer, onRi
         [-2.3500, 53.5650]  // Northeast coordinates
       ];
       map.setMaxBounds(stonecloughBounds);
+
+      // Add a test marker to verify map is working
+      const marker = new mapboxgl.Marker({ color: '#FF0000' })
+        .setLngLat([-2.3769, 53.5526])
+        .setPopup(new mapboxgl.Popup().setHTML('<h3>Stoneclough Community</h3><p>Welcome to SILAS Platform!</p>'))
+        .addTo(map);
+
+      // Force resize to ensure proper display
+      setTimeout(() => {
+        map.resize();
+        console.log('Map resized');
+      }, 100);
     });
 
     if (mapApiRef) {
@@ -351,7 +371,7 @@ function MapboxCentral({ mapData, kmlUrl, onSelect, mapApiRef, activeLayer, onRi
 
   return (
     <div className="relative h-full w-full">
-      <div ref={mapContainer} className="absolute inset-0 z-0" />
+      <div ref={mapContainer} className="absolute inset-0 z-0 map-container" />
 
       {/* Map loading indicator */}
       {!mapLoaded && (

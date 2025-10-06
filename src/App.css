@@ -122,6 +122,14 @@
 /* Mapbox GL CSS - Essential for map rendering */
 @import 'mapbox-gl/dist/mapbox-gl.css';
 
+/* Force map container to be visible */
+.map-container {
+  width: 100% !important;
+  height: 100% !important;
+  position: relative !important;
+  background: #f0f0f0 !important;
+}
+
 /* Ensure map container has proper dimensions */
 .mapboxgl-map {
   width: 100% !important;
