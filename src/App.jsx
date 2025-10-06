@@ -20,6 +20,7 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN ||
                      "pk.eyJ1Ijoic2lsYXN0ZWJheSIsImEiOiJjbWdmOXhmMW4wNHplMmxzY2Rzd2lkcWt3In0.0AHptZ2vtFbg8ejWKN2l1w";
 
 // Census data integration is properly imported and ready for use
+// Build timestamp: 2025-01-06 21:15 UTC - Import fix applied
 
 const MAPBOX_STYLE = import.meta.env.VITE_MAPBOX_STYLE ||
                      process.env.VITE_MAPBOX_STYLE ||
