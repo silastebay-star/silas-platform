@@ -527,14 +527,49 @@ function PageOverlay({ layer, onClose, onFlyTo, onSelectFeature, onShowMetrics, 
   const [isLoading, setIsLoading] = useState(true);
 
   const layerDetails = {
-    Faith: { title: 'Faith & Culture', description: 'Community spiritual life, cultural events, and gatherings' },
-    Economy: { title: 'Local Economy', description: 'Supporting local businesses and economic development' },
-    Works: { title: 'Community Projects', description: 'Active and proposed community improvement projects' },
-    Circle: { title: 'Governance & Proposals', description: 'Community decisions, proposals, and civic engagement' },
-    Mind: { title: 'Learning & Knowledge', description: 'Educational resources, skills sharing, and AI assistance' },
-    Pulse: { title: 'Community Data & KPIs', description: 'Tracking community health, engagement, and progress metrics' },
-    Commerce: { title: 'Local Commerce', description: 'Local marketplace, services, and business connections' },
-  }[layer] || { title: layer, description: 'Layer content' };
+    Faith: {
+      title: 'Faith & Culture',
+      description: 'Community spiritual life, cultural events, and gatherings',
+      tools: ['Event Calendar', 'Prayer Requests', 'Community Outreach', 'Volunteer Coordination'],
+      actions: ['Schedule Service', 'Create Event', 'Join Ministry', 'Share Testimony']
+    },
+    Economy: {
+      title: 'Local Economy',
+      description: 'Supporting local businesses and economic development',
+      tools: ['Business Directory', 'Economic Indicators', 'Investment Opportunities', 'Skills Exchange'],
+      actions: ['List Business', 'Find Mentor', 'Offer Services', 'Request Support']
+    },
+    Works: {
+      title: 'Community Projects',
+      description: 'Active and proposed community improvement projects',
+      tools: ['Project Tracker', 'Resource Manager', 'Volunteer Hub', 'Progress Dashboard'],
+      actions: ['Start Project', 'Join Team', 'Donate Resources', 'Track Progress']
+    },
+    Circle: {
+      title: 'Governance & Proposals',
+      description: 'Community decisions, proposals, and civic engagement',
+      tools: ['Voting System', 'Proposal Builder', 'Discussion Forums', 'Decision Archive'],
+      actions: ['Create Proposal', 'Cast Vote', 'Join Discussion', 'View Results']
+    },
+    Mind: {
+      title: 'Learning & Knowledge',
+      description: 'Educational resources, skills sharing, and AI assistance',
+      tools: ['Learning Paths', 'Skill Matcher', 'AI Assistant', 'Knowledge Base'],
+      actions: ['Start Course', 'Share Knowledge', 'Ask SILAS', 'Find Tutor']
+    },
+    Pulse: {
+      title: 'Community Data & KPIs',
+      description: 'Tracking community health, engagement, and progress metrics',
+      tools: ['Analytics Dashboard', 'Health Metrics', 'Engagement Tracker', 'Trend Analysis'],
+      actions: ['View Reports', 'Set Goals', 'Track KPIs', 'Generate Insights']
+    },
+    Commerce: {
+      title: 'Local Commerce',
+      description: 'Local marketplace, services, and business connections',
+      tools: ['Marketplace', 'Service Directory', 'Local Currency', 'Trade Network'],
+      actions: ['List Item', 'Offer Service', 'Make Purchase', 'Join Network']
+    },
+  }[layer] || { title: layer, description: 'Layer content', tools: [], actions: [] };
 
   useEffect(() => {
     const fetchLayerPosts = async () => {
@@ -586,8 +621,43 @@ function PageOverlay({ layer, onClose, onFlyTo, onSelectFeature, onShowMetrics, 
           </div>
         </div>
         <p className="text-sm text-gray-600">{layerDetails.description}</p>
+
+        {/* Category Tools */}
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold text-gray-700 mb-2">Available Tools</h3>
+          <div className="grid grid-cols-2 gap-2">
+            {layerDetails.tools.map((tool, index) => (
+              <Button
+                key={index}
+                variant="outline"
+                size="sm"
+                className="text-xs justify-start"
+                style={{ borderColor: LAYER_CONFIG[layer]?.color + '40', color: LAYER_CONFIG[layer]?.color }}
+              >
+                {tool}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {/* Quick Actions */}
+        <div className="mt-4">
+          <h3 className="text-sm font-semibold text-gray-700 mb-2">Quick Actions</h3>
+          <div className="grid grid-cols-1 gap-2">
+            {layerDetails.actions.map((action, index) => (
+              <Button
+                key={index}
+                size="sm"
+                className="text-xs justify-start"
+                style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}
+              >
+                {action}
+              </Button>
+            ))}
+          </div>
+        </div>
       </div>
-      
+
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
         {isLoading ? (
           <p className="text-center text-gray-500">Loading...</p>
