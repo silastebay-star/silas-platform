@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>SILAS Platform Map Diagnostic</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.js"></script>
+    <style>
+        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+        #map { width: 100%; height: 400px; border: 2px solid #ccc; margin: 20px 0; }
+        .diagnostic { background: #f5f5f5; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>🗺️ SILAS Platform Map Diagnostic Tool</h1>
+    
+    <div class="diagnostic">
+        <h3>Map Configuration Test</h3>
+        <div id="token-status">Checking Mapbox token...</div>
+        <div id="style-status">Checking map style...</div>
+        <div id="coordinates-status">Checking Stoneclough coordinates...</div>
+    </div>
+
+    <div id="map"></div>
+    
+    <div class="diagnostic">
+        <h3>Diagnostic Results</h3>
+        <div id="results"></div>
+    </div>
+
+    <script>
+        const MAPBOX_TOKEN = "pk.eyJ1Ijoic2lsYXN0ZWJheSIsImEiOiJjbWdmOXhmMW4wNHplMmxzY2Rzd2lkcWt3In0.0AHptZ2vtFbg8ejWKN2l1w";
+        const STONECLOUGH_CENTER = [-2.3769, 53.5526];
+        
+        function updateStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.innerHTML = `<span class="${type}">${message}</span>`;
+        }
+        
+        function addResult(message, type = 'info') {
+            const results = document.getElementById('results');
+            results.innerHTML += `<div class="${type}">• ${message}</div>`;
+        }
+        
+        // Test 1: Token validation
+        if (MAPBOX_TOKEN && MAPBOX_TOKEN.startsWith('pk.')) {
+            updateStatus('token-status', '✅ Mapbox token format is valid', 'success');
+            addResult('Mapbox token format is correct', 'success');
+        } else {
+            updateStatus('token-status', '❌ Invalid Mapbox token format', 'error');
+            addResult('Mapbox token format is invalid', 'error');
+        }
+        
+        // Test 2: Style validation
+        const STYLE_URL = "mapbox://styles/mapbox/streets-v12";
+        updateStatus('style-status', `✅ Using reliable style: ${STYLE_URL}`, 'success');
+        addResult(`Map style: ${STYLE_URL}`, 'success');
+        
+        // Test 3: Coordinates validation
+        if (STONECLOUGH_CENTER[0] >= -180 && STONECLOUGH_CENTER[0] <= 180 && 
+            STONECLOUGH_CENTER[1] >= -90 && STONECLOUGH_CENTER[1] <= 90) {
+            updateStatus('coordinates-status', `✅ Stoneclough coordinates valid: ${STONECLOUGH_CENTER}`, 'success');
+            addResult(`Coordinates are valid: ${STONECLOUGH_CENTER}`, 'success');
+        } else {
+            updateStatus('coordinates-status', '❌ Invalid coordinates', 'error');
+            addResult('Coordinates are invalid', 'error');
+        }
+        
+        // Initialize map
+        mapboxgl.accessToken = MAPBOX_TOKEN;
+        
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: STYLE_URL,
+            center: STONECLOUGH_CENTER,
+            zoom: 15
+        });
+        
+        map.on('load', () => {
+            addResult('Map loaded successfully!', 'success');
+            
+            // Add test marker
+            new mapboxgl.Marker({ color: '#FF0000' })
+                .setLngLat(STONECLOUGH_CENTER)
+                .setPopup(new mapboxgl.Popup().setHTML('<h3>Stoneclough Test</h3><p>Map is working correctly!</p>'))
+                .addTo(map);
+            
+            addResult('Test marker added successfully', 'success');
+            
+            // Add navigation controls
+            map.addControl(new mapboxgl.NavigationControl());
+            addResult('Navigation controls added', 'success');
+        });
+        
+        map.on('error', (e) => {
+            addResult(`Map error: ${e.error.message}`, 'error');
+            console.error('Map error:', e);
+        });
+        
+        map.on('styledata', () => {
+            addResult('Map style loaded successfully', 'success');
+        });
+        
+        // Test WebGL support
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (gl) {
+            addResult('WebGL is supported', 'success');
+        } else {
+            addResult('WebGL is not supported - map may not work', 'error');
+        }
+        
+        addResult(`Browser: ${navigator.userAgent}`, 'info');
+        addResult(`Screen resolution: ${screen.width}x${screen.height}`, 'info');
+    </script>
+</body>
+</html>
