@@ -1,0 +1,2 @@
+Title: Stoneclough — brief history
+Stoneclough (Staneclough) grew as a riverside industrial hamlet. Key landmarks include Ringley Old Bridge (1677) and St. Saviour’s Church. The 19th century saw cotton mills and coal pits; by the late 20th century most industry closed and many services relocated. Residents report decline in local shops and communal spaces. Source: local oral histories and Stoneclough Reborn research.
