@@ -882,6 +882,463 @@ function ResourceManager({ layer, onClose }) {
   );
 }
 
+// Circle (Governance) Layer Tools
+function VotingSystem({ layer, onClose }) {
+  const [proposals, setProposals] = useState([
+    { id: 1, title: "New Community Center Hours", description: "Extend opening hours to 9 PM", votes: { yes: 45, no: 12 }, deadline: "5 days", status: "Active" },
+    { id: 2, title: "Traffic Calming Measures", description: "Install speed bumps on Main Street", votes: { yes: 38, no: 22 }, deadline: "2 days", status: "Active" },
+    { id: 3, title: "Annual Budget Allocation", description: "Approve 2025 community budget", votes: { yes: 67, no: 8 }, deadline: "Closed", status: "Passed" }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Voting System</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <Button className="w-full" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+        Create New Proposal
+      </Button>
+
+      <div className="space-y-3">
+        {proposals.map(proposal => (
+          <Card key={proposal.id} className="p-3">
+            <div className="space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{proposal.title}</h4>
+                  <p className="text-sm text-gray-600">{proposal.description}</p>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  proposal.status === 'Active' ? 'bg-blue-100 text-blue-800' :
+                  proposal.status === 'Passed' ? 'bg-green-100 text-green-800' :
+                  'bg-red-100 text-red-800'
+                }`}>
+                  {proposal.status}
+                </span>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Yes: {proposal.votes.yes}</span>
+                  <span>No: {proposal.votes.no}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="h-2 rounded-full transition-all bg-green-500"
+                    style={{
+                      width: `${(proposal.votes.yes / (proposal.votes.yes + proposal.votes.no)) * 100}%`
+                    }}
+                  />
+                </div>
+                <div className="text-xs text-gray-500 text-center">
+                  {proposal.deadline !== 'Closed' ? `${proposal.deadline} remaining` : 'Voting closed'}
+                </div>
+              </div>
+
+              {proposal.status === 'Active' && (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button size="sm" className="text-xs bg-green-600 hover:bg-green-700">
+                    Vote Yes
+                  </Button>
+                  <Button size="sm" variant="outline" className="text-xs border-red-300 text-red-600 hover:bg-red-50">
+                    Vote No
+                  </Button>
+                </div>
+              )}
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ProposalBuilder({ layer, onClose }) {
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    category: 'Infrastructure',
+    duration: '7'
+  });
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Proposal Builder</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Proposal Title</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            placeholder="Enter proposal title..."
+            value={formData.title}
+            onChange={(e) => setFormData({...formData, title: e.target.value})}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <textarea
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm h-20"
+            placeholder="Describe your proposal..."
+            value={formData.description}
+            onChange={(e) => setFormData({...formData, description: e.target.value})}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.category}
+              onChange={(e) => setFormData({...formData, category: e.target.value})}
+            >
+              <option>Infrastructure</option>
+              <option>Community</option>
+              <option>Environment</option>
+              <option>Budget</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Voting Duration</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.duration}
+              onChange={(e) => setFormData({...formData, duration: e.target.value})}
+            >
+              <option value="3">3 days</option>
+              <option value="7">7 days</option>
+              <option value="14">14 days</option>
+              <option value="30">30 days</option>
+            </select>
+          </div>
+        </div>
+
+        <Button className="w-full" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+          Submit Proposal
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function DiscussionForums({ layer, onClose }) {
+  const [discussions, setDiscussions] = useState([
+    { id: 1, title: "Community Garden Location", author: "Sarah M.", replies: 12, lastActivity: "2 hours ago", category: "Environment" },
+    { id: 2, title: "Traffic Safety Concerns", author: "John D.", replies: 8, lastActivity: "5 hours ago", category: "Infrastructure" },
+    { id: 3, title: "Youth Programs Funding", author: "Emma L.", replies: 15, lastActivity: "1 day ago", category: "Community" }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Discussion Forums</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <Button className="w-full" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+        Start New Discussion
+      </Button>
+
+      <div className="space-y-3">
+        {discussions.map(discussion => (
+          <Card key={discussion.id} className="p-3 hover:shadow-md transition-shadow cursor-pointer">
+            <div className="space-y-2">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{discussion.title}</h4>
+                  <p className="text-sm text-gray-600">by {discussion.author}</p>
+                </div>
+                <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
+                  {discussion.category}
+                </span>
+              </div>
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>{discussion.replies} replies</span>
+                <span>Last activity: {discussion.lastActivity}</span>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function DecisionArchive({ layer, onClose }) {
+  const [decisions, setDecisions] = useState([
+    { id: 1, title: "Playground Equipment Upgrade", date: "Dec 2024", result: "Approved", votes: "52-8", impact: "High" },
+    { id: 2, title: "Street Lighting Improvement", date: "Nov 2024", result: "Approved", votes: "45-15", impact: "Medium" },
+    { id: 3, title: "Dog Park Proposal", date: "Oct 2024", result: "Rejected", votes: "23-37", impact: "Low" }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Decision Archive</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="flex gap-2">
+        <Button variant="outline" size="sm" className="text-xs">Filter by Date</Button>
+        <Button variant="outline" size="sm" className="text-xs">Filter by Result</Button>
+      </div>
+
+      <div className="space-y-3">
+        {decisions.map(decision => (
+          <Card key={decision.id} className="p-3">
+            <div className="space-y-2">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{decision.title}</h4>
+                  <p className="text-sm text-gray-600">{decision.date}</p>
+                </div>
+                <div className="text-right">
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    decision.result === 'Approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {decision.result}
+                  </span>
+                  <div className="text-xs text-gray-500 mt-1">
+                    Impact: {decision.impact}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>Final vote: {decision.votes}</span>
+                <Button size="sm" variant="outline" className="text-xs">
+                  View Details
+                </Button>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Mind Layer Tools
+function LearningPaths({ layer, onClose }) {
+  const [paths, setPaths] = useState([
+    { id: 1, title: "Sustainable Living", progress: 60, modules: 8, completed: 5, difficulty: "Beginner", duration: "4 weeks" },
+    { id: 2, title: "Local History & Heritage", progress: 25, modules: 12, completed: 3, difficulty: "Intermediate", duration: "6 weeks" },
+    { id: 3, title: "Community Leadership", progress: 0, modules: 10, completed: 0, difficulty: "Advanced", duration: "8 weeks" }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Learning Paths</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <Button className="w-full" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+        Create Custom Path
+      </Button>
+
+      <div className="space-y-3">
+        {paths.map(path => (
+          <Card key={path.id} className="p-3">
+            <div className="space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{path.title}</h4>
+                  <p className="text-sm text-gray-600">{path.modules} modules • {path.duration}</p>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  path.difficulty === 'Beginner' ? 'bg-green-100 text-green-800' :
+                  path.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-red-100 text-red-800'
+                }`}>
+                  {path.difficulty}
+                </span>
+              </div>
+
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span>Progress: {path.completed}/{path.modules} modules</span>
+                  <span>{path.progress}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="h-2 rounded-full transition-all"
+                    style={{
+                      width: `${path.progress}%`,
+                      backgroundColor: LAYER_CONFIG[layer]?.color
+                    }}
+                  />
+                </div>
+              </div>
+
+              <Button
+                size="sm"
+                className="w-full text-xs"
+                style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}
+              >
+                {path.progress > 0 ? 'Continue Learning' : 'Start Path'}
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SkillMatcher({ layer, onClose }) {
+  const [matches, setMatches] = useState([
+    { id: 1, skill: "Web Development", teacher: "Alex R.", rating: 4.9, availability: "Weekends", price: "£25/hour" },
+    { id: 2, skill: "Organic Gardening", teacher: "Mary S.", rating: 4.8, availability: "Afternoons", price: "£15/hour" },
+    { id: 3, skill: "Photography", teacher: "David L.", rating: 4.7, availability: "Evenings", price: "£20/hour" }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Skill Matcher</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="outline" className="text-xs">Find Teacher</Button>
+        <Button className="text-xs" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+          Offer Teaching
+        </Button>
+      </div>
+
+      <div className="space-y-3">
+        {matches.map(match => (
+          <Card key={match.id} className="p-3">
+            <div className="space-y-2">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{match.skill}</h4>
+                  <p className="text-sm text-gray-600">with {match.teacher}</p>
+                  <p className="text-xs text-gray-500">{match.availability} • {match.price}</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm" style={{ color: LAYER_CONFIG[layer]?.color }}>
+                    ⭐ {match.rating}
+                  </div>
+                </div>
+              </div>
+              <Button size="sm" className="w-full text-xs" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+                Connect
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AIAssistant({ layer, onClose }) {
+  const [messages, setMessages] = useState([
+    { id: 1, type: 'ai', content: "Hello! I'm SILAS, your community AI assistant. How can I help you today?" },
+    { id: 2, type: 'user', content: "What community events are happening this week?" },
+    { id: 3, type: 'ai', content: "This week we have: Sunday Service (Jan 12, 10 AM), Community Garden workday (Jan 14, 2 PM), and Town Hall meeting (Jan 16, 7 PM). Would you like details about any of these?" }
+  ]);
+  const [newMessage, setNewMessage] = useState('');
+
+  return (
+    <div className="p-4 space-y-4 h-full flex flex-col">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Ask SILAS AI</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="flex-1 space-y-3 overflow-y-auto">
+        {messages.map(message => (
+          <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[80%] p-3 rounded-lg text-sm ${
+              message.type === 'user'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-100 text-gray-800'
+            }`}>
+              {message.content}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex gap-2">
+        <input
+          type="text"
+          className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
+          placeholder="Ask SILAS anything..."
+          value={newMessage}
+          onChange={(e) => setNewMessage(e.target.value)}
+        />
+        <Button size="sm" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+          Send
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function KnowledgeBase({ layer, onClose }) {
+  const [articles, setArticles] = useState([
+    { id: 1, title: "Community Guidelines", category: "Governance", views: 234, updated: "1 week ago" },
+    { id: 2, title: "Local Business Directory", category: "Economy", views: 189, updated: "3 days ago" },
+    { id: 3, title: "Emergency Procedures", category: "Safety", views: 156, updated: "2 weeks ago" },
+    { id: 4, title: "Recycling & Waste Guide", category: "Environment", views: 145, updated: "1 month ago" }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Knowledge Base</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="flex gap-2">
+        <input
+          type="text"
+          className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
+          placeholder="Search knowledge base..."
+        />
+        <Button size="sm" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+          Search
+        </Button>
+      </div>
+
+      <div className="space-y-3">
+        {articles.map(article => (
+          <Card key={article.id} className="p-3 hover:shadow-md transition-shadow cursor-pointer">
+            <div className="space-y-2">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{article.title}</h4>
+                  <p className="text-sm text-gray-600">{article.category}</p>
+                </div>
+                <div className="text-right text-xs text-gray-500">
+                  <div>{article.views} views</div>
+                  <div>{article.updated}</div>
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <Button className="w-full" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+        Contribute Article
+      </Button>
+    </div>
+  );
+}
+
 // Tool Renderer Function
 function renderTool(tool, layer, onClose) {
   const toolComponents = {
@@ -902,6 +1359,18 @@ function renderTool(tool, layer, onClose) {
       'Resource Manager': () => <ResourceManager layer={layer} onClose={onClose} />,
       'Volunteer Hub': () => renderTool('Volunteer Hub', layer, onClose),
       'Progress Dashboard': () => renderTool('Progress Dashboard', layer, onClose)
+    },
+    'Circle': {
+      'Voting System': () => <VotingSystem layer={layer} onClose={onClose} />,
+      'Proposal Builder': () => <ProposalBuilder layer={layer} onClose={onClose} />,
+      'Discussion Forums': () => <DiscussionForums layer={layer} onClose={onClose} />,
+      'Decision Archive': () => <DecisionArchive layer={layer} onClose={onClose} />
+    },
+    'Mind': {
+      'Learning Paths': () => <LearningPaths layer={layer} onClose={onClose} />,
+      'Skill Matcher': () => <SkillMatcher layer={layer} onClose={onClose} />,
+      'AI Assistant': () => <AIAssistant layer={layer} onClose={onClose} />,
+      'Knowledge Base': () => <KnowledgeBase layer={layer} onClose={onClose} />
     }
   };
 
