@@ -1339,6 +1339,224 @@ function KnowledgeBase({ layer, onClose }) {
   );
 }
 
+// Pulse Layer Tools
+function AnalyticsDashboard({ layer, onClose }) {
+  const [metrics, setMetrics] = useState({
+    totalUsers: 234,
+    activeToday: 45,
+    postsThisWeek: 28,
+    engagementRate: 73,
+    communityHealth: 85
+  });
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Analytics Dashboard</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Card className="p-3 text-center">
+          <div className="text-2xl font-bold" style={{ color: LAYER_CONFIG[layer]?.color }}>
+            {metrics.totalUsers}
+          </div>
+          <div className="text-sm text-gray-600">Total Users</div>
+        </Card>
+        <Card className="p-3 text-center">
+          <div className="text-2xl font-bold" style={{ color: LAYER_CONFIG[layer]?.color }}>
+            {metrics.activeToday}
+          </div>
+          <div className="text-sm text-gray-600">Active Today</div>
+        </Card>
+        <Card className="p-3 text-center">
+          <div className="text-2xl font-bold" style={{ color: LAYER_CONFIG[layer]?.color }}>
+            {metrics.postsThisWeek}
+          </div>
+          <div className="text-sm text-gray-600">Posts This Week</div>
+        </Card>
+        <Card className="p-3 text-center">
+          <div className="text-2xl font-bold" style={{ color: LAYER_CONFIG[layer]?.color }}>
+            {metrics.engagementRate}%
+          </div>
+          <div className="text-sm text-gray-600">Engagement Rate</div>
+        </Card>
+      </div>
+
+      <Card className="p-4">
+        <h4 className="font-medium mb-3">Community Health Score</h4>
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span>Overall Health</span>
+            <span>{metrics.communityHealth}%</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-3">
+            <div
+              className="h-3 rounded-full transition-all bg-green-500"
+              style={{ width: `${metrics.communityHealth}%` }}
+            />
+          </div>
+        </div>
+      </Card>
+
+      <Button className="w-full" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+        Generate Report
+      </Button>
+    </div>
+  );
+}
+
+function HealthMetrics({ layer, onClose }) {
+  const [healthData, setHealthData] = useState([
+    { metric: "Community Participation", score: 78, trend: "up", change: "+5%" },
+    { metric: "Economic Activity", score: 82, trend: "up", change: "+12%" },
+    { metric: "Social Cohesion", score: 71, trend: "stable", change: "0%" },
+    { metric: "Environmental Health", score: 85, trend: "up", change: "+3%" }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Health Metrics</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="space-y-3">
+        {healthData.map((item, index) => (
+          <Card key={index} className="p-3">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium text-gray-900">{item.metric}</h4>
+                <div className="flex items-center gap-2">
+                  <span className={`text-sm ${
+                    item.trend === 'up' ? 'text-green-600' :
+                    item.trend === 'down' ? 'text-red-600' : 'text-gray-600'
+                  }`}>
+                    {item.trend === 'up' ? '↗️' : item.trend === 'down' ? '↘️' : '➡️'} {item.change}
+                  </span>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span>Score</span>
+                  <span>{item.score}/100</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="h-2 rounded-full transition-all"
+                    style={{
+                      width: `${item.score}%`,
+                      backgroundColor: LAYER_CONFIG[layer]?.color
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Commerce Layer Tools
+function Marketplace({ layer, onClose }) {
+  const [listings, setListings] = useState([
+    { id: 1, title: "Fresh Vegetables", seller: "Green Valley Farm", price: "£15", category: "Food", image: "🥕" },
+    { id: 2, title: "Handmade Pottery", seller: "Local Crafts Co.", price: "£25", category: "Crafts", image: "🏺" },
+    { id: 3, title: "Honey (Local)", seller: "Bee Happy Farm", price: "£8", category: "Food", image: "🍯" }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Marketplace</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="outline" className="text-xs">Browse All</Button>
+        <Button className="text-xs" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+          List Item
+        </Button>
+      </div>
+
+      <div className="space-y-3">
+        {listings.map(listing => (
+          <Card key={listing.id} className="p-3 hover:shadow-md transition-shadow">
+            <div className="flex items-center gap-3">
+              <div className="text-2xl">{listing.image}</div>
+              <div className="flex-1">
+                <h4 className="font-medium text-gray-900">{listing.title}</h4>
+                <p className="text-sm text-gray-600">by {listing.seller}</p>
+                <p className="text-xs text-gray-500">{listing.category}</p>
+              </div>
+              <div className="text-right">
+                <div className="text-lg font-bold" style={{ color: LAYER_CONFIG[layer]?.color }}>
+                  {listing.price}
+                </div>
+                <Button size="sm" className="text-xs mt-1" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+                  Buy
+                </Button>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ServiceDirectory({ layer, onClose }) {
+  const [services, setServices] = useState([
+    { id: 1, name: "Home Repairs", provider: "Fix-It Solutions", rating: 4.8, price: "£30/hour", available: true },
+    { id: 2, name: "Garden Maintenance", provider: "Green Thumb Services", rating: 4.9, price: "£25/hour", available: true },
+    { id: 3, name: "Pet Sitting", provider: "Caring Paws", rating: 4.7, price: "£15/day", available: false }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Service Directory</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <Button className="w-full" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+        Offer Service
+      </Button>
+
+      <div className="space-y-3">
+        {services.map(service => (
+          <Card key={service.id} className="p-3">
+            <div className="space-y-2">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{service.name}</h4>
+                  <p className="text-sm text-gray-600">{service.provider}</p>
+                  <p className="text-xs text-gray-500">⭐ {service.rating} • {service.price}</p>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  service.available ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                }`}>
+                  {service.available ? 'Available' : 'Busy'}
+                </span>
+              </div>
+              <Button
+                size="sm"
+                className="w-full text-xs"
+                disabled={!service.available}
+                style={{ backgroundColor: service.available ? LAYER_CONFIG[layer]?.color : '#gray' }}
+              >
+                {service.available ? 'Book Service' : 'Unavailable'}
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Tool Renderer Function
 function renderTool(tool, layer, onClose) {
   const toolComponents = {
@@ -1371,6 +1589,18 @@ function renderTool(tool, layer, onClose) {
       'Skill Matcher': () => <SkillMatcher layer={layer} onClose={onClose} />,
       'AI Assistant': () => <AIAssistant layer={layer} onClose={onClose} />,
       'Knowledge Base': () => <KnowledgeBase layer={layer} onClose={onClose} />
+    },
+    'Pulse': {
+      'Analytics Dashboard': () => <AnalyticsDashboard layer={layer} onClose={onClose} />,
+      'Health Metrics': () => <HealthMetrics layer={layer} onClose={onClose} />,
+      'Engagement Tracker': () => renderTool('Engagement Tracker', layer, onClose),
+      'Trend Analysis': () => renderTool('Trend Analysis', layer, onClose)
+    },
+    'Commerce': {
+      'Marketplace': () => <Marketplace layer={layer} onClose={onClose} />,
+      'Service Directory': () => <ServiceDirectory layer={layer} onClose={onClose} />,
+      'Local Currency': () => renderTool('Local Currency', layer, onClose),
+      'Trade Network': () => renderTool('Trade Network', layer, onClose)
     }
   };
 
