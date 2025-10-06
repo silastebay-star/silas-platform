@@ -13,8 +13,20 @@ import { Progress } from '@/components/ui/progress.jsx';
 import silasLogo from './assets/silas-logo.png';
 import './App.css';
 
-const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || "pk.eyJ1Ijoic2lsYXN0ZWJheSIsImEiOiJjbWdhemRoanIwdm5nMm5yMGtueXBhbmcxIn0.vJn_5sGNt1X4QM4Je7wPFg";
-const MAPBOX_STYLE = import.meta.env.VITE_MAPBOX_STYLE || "mapbox://styles/silastebay/cmgff34w9000v01pebcy24k4l";
+// Mapbox configuration with fallbacks
+const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN ||
+                     process.env.VITE_MAPBOX_TOKEN ||
+                     "pk.eyJ1Ijoic2lsYXN0ZWJheSIsImEiOiJjbWdhemRoanIwdm5nMm5yMGtueXBhbmcxIn0.vJn_5sGNt1X4QM4Je7wPFg";
+
+const MAPBOX_STYLE = import.meta.env.VITE_MAPBOX_STYLE ||
+                     process.env.VITE_MAPBOX_STYLE ||
+                     "mapbox://styles/silastebay/cmgff34w9000v01pebcy24k4l";
+
+// Debug logging for production
+if (typeof window !== 'undefined') {
+  console.log('Mapbox Token Available:', MAPBOX_TOKEN ? 'Yes' : 'No');
+  console.log('Mapbox Style:', MAPBOX_STYLE);
+}
 
 const LAYER_CONFIG = {
   All: { color: "#4c764c", id: "all", icon: MapPin },
