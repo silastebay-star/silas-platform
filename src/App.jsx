@@ -19,6 +19,8 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN ||
                      process.env.VITE_MAPBOX_TOKEN ||
                      "pk.eyJ1Ijoic2lsYXN0ZWJheSIsImEiOiJjbWdmOXhmMW4wNHplMmxzY2Rzd2lkcWt3In0.0AHptZ2vtFbg8ejWKN2l1w";
 
+// Census data integration is properly imported and ready for use
+
 const MAPBOX_STYLE = import.meta.env.VITE_MAPBOX_STYLE ||
                      process.env.VITE_MAPBOX_STYLE ||
                      "mapbox://styles/silastebay/cmgff34w9000v01pebcy24k4l";
