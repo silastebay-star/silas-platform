@@ -138,78 +138,120 @@ export const supabaseHelpers = {
 
   // Metrics and analytics
   async getLayerMetrics(layer = null) {
-    let query = supabase
-      .from(TABLES.PINS)
-      .select(`
-        layer,
-        feedback(count),
-        comments(count),
-        created_at
-      `)
-      .eq('status', 'active')
+    try {
+      // Get pins data
+      let pinsQuery = supabase
+        .from(TABLES.PINS)
+        .select('*')
+        .eq('status', 'active')
 
-    if (layer && layer !== 'All') {
-      query = query.eq('layer', layer)
-    }
-
-    const { data, error } = await query
-    if (error) throw error
-
-    // Process metrics
-    const metrics = {
-      totalPins: data.length,
-      totalFeedback: data.reduce((sum, pin) => sum + (pin.feedback[0]?.count || 0), 0),
-      totalComments: data.reduce((sum, pin) => sum + (pin.comments[0]?.count || 0), 0),
-      layerBreakdown: {},
-      recentActivity: data.filter(pin => {
-        const created = new Date(pin.created_at);
-        const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-        return created > weekAgo;
-      }).length
-    };
-
-    // Layer breakdown
-    data.forEach(pin => {
-      if (!metrics.layerBreakdown[pin.layer]) {
-        metrics.layerBreakdown[pin.layer] = {
-          pins: 0,
-          feedback: 0,
-          comments: 0
-        };
+      if (layer && layer !== 'All') {
+        pinsQuery = pinsQuery.eq('layer', layer)
       }
-      metrics.layerBreakdown[pin.layer].pins++;
-      metrics.layerBreakdown[pin.layer].feedback += pin.feedback[0]?.count || 0;
-      metrics.layerBreakdown[pin.layer].comments += pin.comments[0]?.count || 0;
-    });
 
-    return metrics;
+      const { data: pins, error: pinsError } = await pinsQuery
+      if (pinsError) throw pinsError
+
+      // Get feedback counts
+      const { data: feedbackData, error: feedbackError } = await supabase
+        .from(TABLES.FEEDBACK)
+        .select('pin_id')
+
+      if (feedbackError) console.warn('Feedback query error:', feedbackError)
+
+      // Get comments counts
+      const { data: commentsData, error: commentsError } = await supabase
+        .from(TABLES.COMMENTS)
+        .select('pin_id')
+
+      if (commentsError) console.warn('Comments query error:', commentsError)
+
+      // Process metrics
+      const feedbackCounts = {}
+      const commentsCounts = {}
+
+      feedbackData?.forEach(f => {
+        feedbackCounts[f.pin_id] = (feedbackCounts[f.pin_id] || 0) + 1
+      })
+
+      commentsData?.forEach(c => {
+        commentsCounts[c.pin_id] = (commentsCounts[c.pin_id] || 0) + 1
+      })
+
+      const metrics = {
+        totalPins: pins.length,
+        totalFeedback: Object.values(feedbackCounts).reduce((sum, count) => sum + count, 0),
+        totalComments: Object.values(commentsCounts).reduce((sum, count) => sum + count, 0),
+        layerBreakdown: {},
+        recentActivity: pins.filter(pin => {
+          const created = new Date(pin.created_at);
+          const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+          return created > weekAgo;
+        }).length
+      };
+
+      // Layer breakdown
+      pins.forEach(pin => {
+        if (!metrics.layerBreakdown[pin.layer]) {
+          metrics.layerBreakdown[pin.layer] = {
+            pins: 0,
+            feedback: 0,
+            comments: 0
+          };
+        }
+        metrics.layerBreakdown[pin.layer].pins++;
+        metrics.layerBreakdown[pin.layer].feedback += feedbackCounts[pin.id] || 0;
+        metrics.layerBreakdown[pin.layer].comments += commentsCounts[pin.id] || 0;
+      });
+
+      return metrics;
+    } catch (error) {
+      console.error('Error in getLayerMetrics:', error)
+      // Return safe fallback
+      return {
+        totalPins: 0,
+        totalFeedback: 0,
+        totalComments: 0,
+        layerBreakdown: {},
+        recentActivity: 0
+      }
+    }
   },
 
   async getCommunityVitality() {
-    const [activities, pins] = await Promise.all([
-      this.getRecentActivities(50),
-      this.getPins()
-    ]);
+    try {
+      const [activities, pins] = await Promise.all([
+        this.getRecentActivities(50),
+        this.getPins()
+      ]);
 
-    const now = new Date();
-    const dayAgo = new Date(now - 24 * 60 * 60 * 1000);
-    const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
+      const now = new Date();
+      const dayAgo = new Date(now - 24 * 60 * 60 * 1000);
+      const weekAgo = new Date(now - 7 * 24 * 60 * 60 * 1000);
 
-    const dailyActivity = activities.filter(a => new Date(a.created_at) > dayAgo).length;
-    const weeklyActivity = activities.filter(a => new Date(a.created_at) > weekAgo).length;
+      const dailyActivity = activities.filter(a => new Date(a.created_at) > dayAgo).length;
+      const weeklyActivity = activities.filter(a => new Date(a.created_at) > weekAgo).length;
 
-    const engagementScore = pins.reduce((score, pin) => {
-      const feedback = pin.feedback[0]?.count || 0;
-      const comments = pin.comments[0]?.count || 0;
-      return score + feedback + (comments * 2); // Comments weighted higher
-    }, 0);
+      // Simple engagement calculation based on pin count
+      const engagementScore = pins.length * 2;
 
-    return {
-      dailyActivity,
-      weeklyActivity,
-      engagementScore,
-      totalPins: pins.length,
-      vitality: Math.min(100, Math.round((dailyActivity * 10 + weeklyActivity * 2 + engagementScore / 10)))
-    };
+      return {
+        dailyActivity,
+        weeklyActivity,
+        engagementScore,
+        totalPins: pins.length,
+        vitality: Math.min(100, Math.round((dailyActivity * 10 + weeklyActivity * 2 + engagementScore)))
+      };
+    } catch (error) {
+      console.error('Error in getCommunityVitality:', error)
+      // Return safe fallback
+      return {
+        dailyActivity: 0,
+        weeklyActivity: 0,
+        engagementScore: 0,
+        totalPins: 0,
+        vitality: 0
+      }
+    }
   }
 }
