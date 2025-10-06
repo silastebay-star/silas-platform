@@ -3372,11 +3372,50 @@ function ViewReports({ layer, onClose }) {
 }
 
 function SetGoals({ layer, onClose }) {
-  const [goals, setGoals] = useState([
-    { id: 1, title: 'Increase Community Participation', target: 300, current: 234, deadline: '2025-03-01', category: 'Engagement' },
-    { id: 2, title: 'Complete 5 Community Projects', target: 5, current: 3, deadline: '2025-06-01', category: 'Projects' },
-    { id: 3, title: 'Host 12 Monthly Events', target: 12, current: 8, deadline: '2025-12-01', category: 'Events' }
-  ]);
+  // Generate demographic-aware goals based on census data
+  const generateSmartGoals = () => {
+    const insights = getCommunityInsights();
+    const baseGoals = [
+      { id: 1, title: 'Increase Community Participation', target: 300, current: 234, deadline: '2025-03-01', category: 'Engagement' },
+      { id: 2, title: 'Complete 5 Community Projects', target: 5, current: 3, deadline: '2025-06-01', category: 'Projects' },
+      { id: 3, title: 'Host 12 Monthly Events', target: 12, current: 8, deadline: '2025-12-01', category: 'Events' }
+    ];
+
+    // Add demographic-specific goals
+    const youngProfessionals = censusData.stoneclough.ageGroups['25-34'];
+    const boltonYoungProfessionals = censusData.bolton.ageGroups['25-34'];
+
+    if (youngProfessionals > boltonYoungProfessionals) {
+      baseGoals.push({
+        id: 4,
+        title: 'Launch Young Professional Network',
+        target: 50,
+        current: 12,
+        deadline: '2025-04-01',
+        category: 'Demographics',
+        insight: `Leverage ${formatPercentage(youngProfessionals)} young professional population`
+      });
+    }
+
+    const highEducation = censusData.stoneclough.education.level4Plus;
+    const englandHighEducation = censusData.england.education.level4Plus;
+
+    if (highEducation > englandHighEducation) {
+      baseGoals.push({
+        id: 5,
+        title: 'Establish Skills Sharing Program',
+        target: 25,
+        current: 8,
+        deadline: '2025-05-01',
+        category: 'Education',
+        insight: `Utilize ${formatPercentage(highEducation)} higher education rate advantage`
+      });
+    }
+
+    return baseGoals;
+  };
+
+  const [goals, setGoals] = useState(generateSmartGoals());
 
   const [newGoal, setNewGoal] = useState({
     title: '',
@@ -3413,6 +3452,9 @@ function SetGoals({ layer, onClose }) {
                 <div className="flex-1">
                   <h5 className="font-medium text-gray-900">{goal.title}</h5>
                   <p className="text-sm text-gray-600">{goal.category} • Due: {new Date(goal.deadline).toLocaleDateString()}</p>
+                  {goal.insight && (
+                    <p className="text-xs text-blue-600 mt-1">💡 {goal.insight}</p>
+                  )}
                 </div>
                 <span className="text-sm font-medium" style={{ color: LAYER_CONFIG[layer]?.color }}>
                   {goal.current}/{goal.target}
@@ -3438,8 +3480,40 @@ function SetGoals({ layer, onClose }) {
         ))}
       </div>
 
+      <div className="p-3 bg-blue-50 rounded-lg">
+        <h4 className="font-medium text-blue-900 mb-2">Community Strengths</h4>
+        <div className="space-y-1 text-sm text-blue-800">
+          <div>🎓 Higher education: {formatPercentage(censusData.stoneclough.education.level4Plus)} vs {formatPercentage(censusData.england.education.level4Plus)} England avg</div>
+          <div>💼 Young professionals: {formatPercentage(censusData.stoneclough.ageGroups['25-34'])} vs {formatPercentage(censusData.bolton.ageGroups['25-34'])} Bolton avg</div>
+          <div>🏠 Home ownership: {formatPercentage(censusData.stoneclough.housing.owned)} vs {formatPercentage(censusData.england.housing.owned)} England avg</div>
+        </div>
+      </div>
+
       <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
-        <h4 className="font-medium">Add New Goal</h4>
+        <div className="flex items-center justify-between">
+          <h4 className="font-medium">Add New Goal</h4>
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-xs"
+            onClick={() => {
+              const suggestions = [
+                { title: 'Engage Senior Citizens (65+)', target: 30, category: 'Demographics', reason: `Only ${formatPercentage(censusData.stoneclough.ageGroups['65+'])} vs ${formatPercentage(censusData.bolton.ageGroups['65+'])} Bolton avg` },
+                { title: 'Support Young Families', target: 40, category: 'Demographics', reason: `${formatPercentage(censusData.stoneclough.ageGroups['35-49'])} family-age residents` },
+                { title: 'Leverage High Education', target: 20, category: 'Education', reason: `${formatPercentage(censusData.stoneclough.education.level4Plus)} have higher education` }
+              ];
+              const suggestion = suggestions[Math.floor(Math.random() * suggestions.length)];
+              setNewGoal({
+                title: suggestion.title,
+                target: suggestion.target.toString(),
+                deadline: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+                category: suggestion.category
+              });
+            }}
+          >
+            💡 Smart Suggest
+          </Button>
+        </div>
         <div>
           <input
             type="text"
