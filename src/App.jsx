@@ -13,10 +13,10 @@ import { Progress } from '@/components/ui/progress.jsx';
 import silasLogo from './assets/silas-logo.png';
 import './App.css';
 
-// Mapbox configuration with fallbacks
+// Mapbox configuration with correct token
 const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN ||
                      process.env.VITE_MAPBOX_TOKEN ||
-                     "pk.eyJ1Ijoic2lsYXN0ZWJheSIsImEiOiJjbWdhemRoanIwdm5nMm5yMGtueXBhbmcxIn0.vJn_5sGNt1X4QM4Je7wPFg";
+                     "pk.eyJ1Ijoic2lsYXN0ZWJheSIsImEiOiJjbWdmOXhmMW4wNHplMmxzY2Rzd2lkcWt3In0.0AHptZ2vtFbg8ejWKN2l1w";
 
 const MAPBOX_STYLE = import.meta.env.VITE_MAPBOX_STYLE ||
                      process.env.VITE_MAPBOX_STYLE ||
