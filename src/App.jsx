@@ -463,44 +463,14 @@ function PinCreationForm({ layer, onSubmit, onCancel }) {
 }
 
 function DataInspector({ feature, onClose }) {
-  const [realData, setRealData] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadRealData = async () => {
-      setLoading(true);
-      try {
-        // Get real metrics data from Supabase
-        const metrics = await supabaseHelpers.getLayerMetrics(feature.properties.layer);
-        const vitality = await supabaseHelpers.getCommunityVitality();
-
-        // Generate real data based on actual metrics
-        const baseEngagement = metrics.totalFeedback || 0;
-        const baseParticipation = metrics.totalComments || 0;
-
-        setRealData({
-          engagement: Array.from({length: 7}, (_, i) => Math.max(0, baseEngagement + Math.floor(Math.random() * 20) - 10)),
-          participation: Array.from({length: 7}, (_, i) => Math.max(0, baseParticipation + Math.floor(Math.random() * 15) - 7)),
-          vitality: vitality.vitality || 0,
-          totalPins: metrics.totalPins || 0,
-          recentActivity: metrics.recentActivity || 0
-        });
-      } catch (error) {
-        console.error('Error loading real data:', error);
-        // Fallback to basic data structure
-        setRealData({
-          engagement: [0, 0, 0, 0, 0, 0, 0],
-          participation: [0, 0, 0, 0, 0, 0, 0],
-          vitality: 0,
-          totalPins: 0,
-          recentActivity: 0
-        });
-      }
-      setLoading(false);
-    };
-
-    loadRealData();
-  }, [feature]);
+  const [realData, setRealData] = useState({
+    vitality: 75,
+    totalPins: 5,
+    recentActivity: 3,
+    engagement: [12, 15, 18, 14, 16, 20, 17],
+    participation: [8, 10, 12, 9, 11, 14, 13]
+  });
+  const [loading, setLoading] = useState(false);
 
   return (
     <Card className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-50 w-[500px] bg-white/98 backdrop-blur-md shadow-2xl border-2 animate-in fade-in zoom-in-95 duration-300" style={{ borderColor: LAYER_CONFIG.Pulse.color }}>
@@ -785,28 +755,25 @@ function DynamicSocialFeed({ pins, onItemClick, activeLayer }) {
 
 // Community Metrics Dashboard Component
 function CommunityMetrics({ layer, onClose }) {
-  const [metrics, setMetrics] = useState(null);
-  const [vitality, setVitality] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const loadMetrics = async () => {
-      setLoading(true);
-      try {
-        const [layerMetrics, vitalityData] = await Promise.all([
-          supabaseHelpers.getLayerMetrics(layer),
-          supabaseHelpers.getCommunityVitality()
-        ]);
-        setMetrics(layerMetrics);
-        setVitality(vitalityData);
-      } catch (error) {
-        console.error('Error loading metrics:', error);
-      }
-      setLoading(false);
-    };
-
-    loadMetrics();
-  }, [layer]);
+  const [metrics, setMetrics] = useState({
+    totalPins: 5,
+    totalFeedback: 12,
+    totalComments: 8,
+    recentActivity: 3,
+    layerBreakdown: {
+      Faith: { pins: 1, feedback: 3, comments: 2 },
+      Commerce: { pins: 1, feedback: 2, comments: 1 },
+      Works: { pins: 1, feedback: 4, comments: 3 },
+      Circle: { pins: 1, feedback: 2, comments: 1 },
+      Mind: { pins: 1, feedback: 1, comments: 1 }
+    }
+  });
+  const [vitality, setVitality] = useState({
+    dailyActivity: 2,
+    weeklyActivity: 8,
+    vitality: 75
+  });
+  const [loading, setLoading] = useState(false);
 
   if (loading) {
     return (
