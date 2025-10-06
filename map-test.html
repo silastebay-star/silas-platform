@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Simple Map Test</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no">
+    <link href="https://api.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.css" rel="stylesheet">
+    <script src="https://api.mapbox.com/mapbox-gl-js/v3.1.0/mapbox-gl.js"></script>
+    <style>
+        body { margin: 0; padding: 0; }
+        #map { width: 100vw; height: 100vh; }
+        .debug { position: absolute; top: 10px; left: 10px; background: white; padding: 10px; z-index: 1000; }
+    </style>
+</head>
+<body>
+    <div class="debug" id="debug">Initializing...</div>
+    <div id="map"></div>
+    
+    <script>
+        const debug = document.getElementById('debug');
+        
+        function log(message) {
+            console.log(message);
+            debug.innerHTML += '<br>' + message;
+        }
+        
+        const MAPBOX_TOKEN = "pk.eyJ1Ijoic2lsYXN0ZWJheSIsImEiOiJjbWdmOXhmMW4wNHplMmxzY2Rzd2lkcWt3In0.0AHptZ2vtFbg8ejWKN2l1w";
+        
+        log('Token: ' + (MAPBOX_TOKEN ? 'Available' : 'Missing'));
+        log('Mapbox GL supported: ' + mapboxgl.supported());
+        
+        mapboxgl.accessToken = MAPBOX_TOKEN;
+        
+        const map = new mapboxgl.Map({
+            container: 'map',
+            style: 'mapbox://styles/mapbox/streets-v12',
+            center: [-2.3769, 53.5526],
+            zoom: 15
+        });
+        
+        map.on('load', () => {
+            log('Map loaded successfully!');
+            
+            // Add a test marker
+            new mapboxgl.Marker({ color: '#FF0000' })
+                .setLngLat([-2.3769, 53.5526])
+                .setPopup(new mapboxgl.Popup().setHTML('<h3>Test Marker</h3><p>Map is working!</p>'))
+                .addTo(map);
+                
+            log('Test marker added');
+        });
+        
+        map.on('error', (e) => {
+            log('ERROR: ' + e.error.message);
+            console.error('Map error:', e);
+        });
+        
+        map.on('styledata', () => {
+            log('Style loaded');
+        });
+    </script>
+</body>
+</html>

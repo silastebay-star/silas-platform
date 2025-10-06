@@ -126,8 +126,17 @@
 .map-container {
   width: 100% !important;
   height: 100% !important;
+  min-height: 100vh !important;
   position: relative !important;
   background: #f0f0f0 !important;
+  z-index: 1 !important;
+}
+
+/* Ensure root elements have full height */
+html, body, #root {
+  height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
 }
 
 /* Ensure map container has proper dimensions */
@@ -146,4 +155,15 @@
 .mapboxgl-canvas {
   width: 100% !important;
   height: 100% !important;
+}
+
+/* Debug styles to ensure map is visible */
+.mapboxgl-map {
+  /* border: 2px solid red !important; */ /* Temporary debug border - commented out */
+}
+
+/* Ensure the map container has a minimum size */
+.map-container {
+  min-width: 300px !important;
+  min-height: 300px !important;
 }

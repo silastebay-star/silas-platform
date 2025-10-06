@@ -22,13 +22,28 @@ const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN ||
 // Census data integration is properly imported and ready for use
 // Build timestamp: 2025-01-06 21:15 UTC - Import fix applied
 
-// Use reliable Mapbox style - fallback to standard if custom fails
-const MAPBOX_STYLE = "mapbox://styles/mapbox/streets-v12"; // Reliable standard style
+// Use environment variable for Mapbox style with fallback to standard
+const MAPBOX_STYLE = import.meta.env.VITE_MAPBOX_STYLE ||
+                     process.env.VITE_MAPBOX_STYLE ||
+                     "mapbox://styles/mapbox/streets-v12"; // Reliable standard style
 
 // Debug logging for production
 if (typeof window !== 'undefined') {
   console.log('Mapbox Token Available:', MAPBOX_TOKEN ? 'Yes' : 'No');
+  console.log('Mapbox Token (first 20 chars):', MAPBOX_TOKEN ? MAPBOX_TOKEN.substring(0, 20) + '...' : 'None');
   console.log('Mapbox Style:', MAPBOX_STYLE);
+  console.log('Environment check:', {
+    VITE_MAPBOX_TOKEN: import.meta.env.VITE_MAPBOX_TOKEN ? 'Set' : 'Not set',
+    VITE_MAPBOX_STYLE: import.meta.env.VITE_MAPBOX_STYLE ? 'Set' : 'Not set',
+    NODE_ENV: import.meta.env.MODE,
+    IS_PRODUCTION: import.meta.env.PROD
+  });
+
+  // Additional debugging for Vercel deployment
+  if (!MAPBOX_TOKEN) {
+    console.error('❌ MAPBOX_TOKEN is missing! Map will not work.');
+    console.log('Available env vars:', Object.keys(import.meta.env));
+  }
 }
 
 const LAYER_CONFIG = {
@@ -53,6 +68,15 @@ function MapboxCentral({ mapData, kmlUrl, onSelect, mapApiRef, activeLayer, onRi
   useEffect(() => {
     mapboxgl.accessToken = MAPBOX_TOKEN;
   }, []);
+
+  // Debug mapData changes
+  useEffect(() => {
+    console.log('MapboxCentral received mapData:', {
+      hasData: !!mapData,
+      featureCount: mapData?.features?.length || 0,
+      type: mapData?.type
+    });
+  }, [mapData]);
 
   const isPointInBoundary = (lngLat) => {
     if (!boundaryPolygonRef.current) return true;
@@ -131,10 +155,31 @@ function MapboxCentral({ mapData, kmlUrl, onSelect, mapApiRef, activeLayer, onRi
   };
 
   useEffect(() => {
-    if (!mapContainer.current) return;
+    if (!mapContainer.current) {
+      console.error('Map container not available');
+      return;
+    }
+
+    console.log('Initializing map with:', {
+      token: MAPBOX_TOKEN ? 'Available' : 'Missing',
+      style: MAPBOX_STYLE,
+      container: mapContainer.current
+    });
 
     // Set Mapbox access token
+    if (!MAPBOX_TOKEN) {
+      console.error('❌ Mapbox token is missing! Cannot initialize map.');
+      setMapLoaded(false);
+      return;
+    }
+
     mapboxgl.accessToken = MAPBOX_TOKEN;
+
+    // Check if mapboxgl is properly loaded
+    if (!mapboxgl.supported()) {
+      console.error('Mapbox GL is not supported by this browser');
+      return;
+    }
 
     const map = new mapboxgl.Map({
       container: mapContainer.current,
@@ -144,6 +189,8 @@ function MapboxCentral({ mapData, kmlUrl, onSelect, mapApiRef, activeLayer, onRi
       maxZoom: 18,
       minZoom: 12
     });
+
+    console.log('Map instance created:', map);
 
     // Add comprehensive error handling for map
     map.on('error', (e) => {
@@ -179,6 +226,8 @@ function MapboxCentral({ mapData, kmlUrl, onSelect, mapApiRef, activeLayer, onRi
         .setLngLat([-2.3769, 53.5526])
         .setPopup(new mapboxgl.Popup().setHTML('<h3>Stoneclough Community</h3><p>Welcome to SILAS Platform!</p>'))
         .addTo(map);
+
+      console.log('Test marker added to map');
 
       // Force resize to ensure proper display
       setTimeout(() => {
@@ -229,12 +278,18 @@ function MapboxCentral({ mapData, kmlUrl, onSelect, mapApiRef, activeLayer, onRi
       }
 
       // 2) Load map data (now passed as a prop)
+      console.log('Adding map data to map:', {
+        hasMapData: !!mapData,
+        featureCount: mapData?.features?.length || 0,
+        mapDataType: mapData?.type
+      });
+
       if (!map.getSource("communityData")) {
-        map.addSource("communityData", { 
-          type: "geojson", 
-          data: mapData, 
-          cluster: true, 
-          clusterRadius: 50 
+        map.addSource("communityData", {
+          type: "geojson",
+          data: mapData,
+          cluster: true,
+          clusterRadius: 50
         });
 
         map.addLayer({
@@ -370,15 +425,25 @@ function MapboxCentral({ mapData, kmlUrl, onSelect, mapApiRef, activeLayer, onRi
   }, [activeLayer]);
 
   return (
-    <div className="relative h-full w-full">
-      <div ref={mapContainer} className="absolute inset-0 z-0 map-container" />
+    <div className="relative h-full w-full" style={{ minHeight: '100vh' }}>
+      <div ref={mapContainer} className="absolute inset-0 z-0 map-container" style={{ height: '100vh' }} />
 
       {/* Map loading indicator */}
       {!mapLoaded && (
         <div className="absolute inset-0 z-10 flex items-center justify-center bg-gray-100">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
-            <p className="text-sm text-gray-600">Loading Stoneclough Map...</p>
+            {MAPBOX_TOKEN ? (
+              <>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                <p className="text-sm text-gray-600">Loading Stoneclough Map...</p>
+              </>
+            ) : (
+              <>
+                <div className="text-red-600 text-6xl mb-4">⚠️</div>
+                <p className="text-lg text-red-600 font-semibold mb-2">Map Configuration Error</p>
+                <p className="text-sm text-gray-600">Mapbox token is missing. Please check environment variables.</p>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -5496,10 +5561,24 @@ export default function SilasPlatform() {
 
   const loadAllData = useCallback(async () => {
     try {
+      console.log('Loading data from:', { geojsonPath, csvPath });
       const [geoRes, csvRes] = await Promise.all([fetch(geojsonPath), fetch(csvPath)]);
+
+      if (!geoRes.ok) {
+        throw new Error(`Failed to fetch GeoJSON: ${geoRes.status} ${geoRes.statusText}`);
+      }
+      if (!csvRes.ok) {
+        throw new Error(`Failed to fetch CSV: ${csvRes.status} ${csvRes.statusText}`);
+      }
+
       const geoData = await geoRes.json();
       const csvText = await csvRes.text();
       const parsedCsv = Papa.parse(csvText, { header: true }).data;
+
+      console.log('Data loaded successfully:', {
+        geoFeatures: geoData.features?.length || 0,
+        csvRows: parsedCsv.length
+      });
 
       geoData.features.forEach((feature) => {
         const fname = String(feature.properties?.name || feature.properties?.id || "").trim();
@@ -5529,7 +5608,15 @@ export default function SilasPlatform() {
       const filteredStaticFeatures = geoData.features.filter(f => !existingStaticIds.has(f.properties.name));
       
       const combinedFeatures = [...filteredStaticFeatures, ...supabaseFeatures];
-      setMapData({ type: "FeatureCollection", features: combinedFeatures });
+      const finalMapData = { type: "FeatureCollection", features: combinedFeatures };
+
+      console.log('Setting map data:', {
+        totalFeatures: combinedFeatures.length,
+        staticFeatures: filteredStaticFeatures.length,
+        dynamicFeatures: supabaseFeatures.length
+      });
+
+      setMapData(finalMapData);
 
       // Update social feed data
       setSocialFeedPins(supabasePins);
@@ -5633,8 +5720,9 @@ export default function SilasPlatform() {
   const LayerIcon = activeLayer ? LAYER_CONFIG[activeLayer]?.icon : Briefcase;
 
   return (
-    <div className="relative min-h-screen w-full overflow-hidden bg-gray-100">
-      <MapboxCentral
+    <div className="relative h-screen w-full overflow-hidden bg-gray-100">
+      <div className="absolute inset-0 z-0">
+        <MapboxCentral
         mapData={mapData}
         kmlUrl={kmlPath}
         onSelect={openFeaturePage}
@@ -5643,7 +5731,8 @@ export default function SilasPlatform() {
         onRightClick={handleRightClick}
         boundsWarning={boundsWarning}
         setBoundsWarning={setBoundsWarning}
-      />
+        />
+      </div>
 
       {/* UI Components */}
       <header className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center bg-white/95 backdrop-blur-md px-6 py-3 rounded-full shadow-xl border-2 transition-all" style={{ borderColor: LAYER_CONFIG[activeLayer]?.color || LAYER_CONFIG.Economy.color }}>
