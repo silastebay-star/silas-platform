@@ -118,3 +118,24 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Mapbox GL CSS - Essential for map rendering */
+@import 'mapbox-gl/dist/mapbox-gl.css';
+
+/* Ensure map container has proper dimensions */
+.mapboxgl-map {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* Fix for map controls */
+.mapboxgl-ctrl-group {
+  background: rgba(255, 255, 255, 0.9) !important;
+  border-radius: 4px !important;
+}
+
+/* Ensure map canvas is properly sized */
+.mapboxgl-canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
