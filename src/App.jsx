@@ -9,6 +9,9 @@ import { Input } from '@/components/ui/input.jsx';
 import { X, MapPin, MessageCircle, ThumbsUp, Users, TrendingUp, Lightbulb, Briefcase, Church, Hammer, Database, Plus } from 'lucide-react';
 import { supabaseHelpers } from './lib/supabase.js';
 import { CopilotModal } from './components/CopilotModal.jsx';
+import BulkPinModal from './components/BulkPinModal.jsx';
+import QuickPinModal from './components/QuickPinModal.jsx';
+import AdminPanel from './components/AdminPanel.jsx';
 import { Progress } from '@/components/ui/progress.jsx';
 import silasLogo from './assets/silas-logo.png';
 import { censusData, getDemographicComparison, getCommunityInsights, formatPercentage, formatPopulation } from './utils/censusData.js';
@@ -471,9 +474,9 @@ function MapboxCentral({ mapData, kmlUrl, onSelect, mapApiRef, activeLayer, onRi
             <button
               className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-blue-50 text-left text-blue-700"
               onClick={() => {
+                setBulkPinCenter({ lat: contextMenu.lngLat.lat, lng: contextMenu.lngLat.lng });
+                setShowBulkPinModal(true);
                 setContextMenu(null);
-                // TODO: Add bulk pin creation modal
-                console.log('Bulk pin creation at:', contextMenu.lngLat);
               }}
             >
               <MapPin size={16} />
@@ -5592,6 +5595,10 @@ export default function SilasPlatform() {
   const [showPinCreation, setShowPinCreation] = useState(null);
   const [showDataInspector, setShowDataInspector] = useState(null);
   const [showCopilot, setShowCopilot] = useState(null);
+  const [showBulkPinModal, setShowBulkPinModal] = useState(false);
+  const [bulkPinCenter, setBulkPinCenter] = useState(null);
+  const [showQuickPin, setShowQuickPin] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [mapData, setMapData] = useState({ type: "FeatureCollection", features: [] });
   const [socialFeedPins, setSocialFeedPins] = useState([]);
   const [showMetrics, setShowMetrics] = useState(null);
@@ -5738,6 +5745,49 @@ export default function SilasPlatform() {
     setShowPinCreation({ lngLat, layer });
   };
 
+  const handleBulkPinCreation = async (pinDataArray) => {
+    try {
+      console.log('Creating bulk pins:', pinDataArray);
+
+      let successCount = 0;
+      for (const pinData of pinDataArray) {
+        try {
+          const newPinData = {
+            name: pinData.title,
+            description: pinData.description,
+            coords: { lat: pinData.lat, lng: pinData.lng },
+            category: pinData.category,
+            userId: 'anonymous',
+            metadata: {
+              priority: pinData.priority || 'normal',
+              bulkCreated: true,
+              createdAt: new Date().toISOString()
+            }
+          };
+
+          await supabaseHelpers.createPin(newPinData);
+          successCount++;
+        } catch (error) {
+          console.error('Error creating individual pin:', error);
+        }
+      }
+
+      await supabaseHelpers.logActivity('bulk_pins_created', {
+        count: successCount,
+        total: pinDataArray.length
+      });
+
+      setShowBulkPinModal(false);
+      setBulkPinCenter(null);
+      loadAllData();
+
+      alert(`Successfully created ${successCount} of ${pinDataArray.length} pins!`);
+    } catch (error) {
+      console.error('Error creating bulk pins:', error);
+      alert('Error creating bulk pins. Please try again.');
+    }
+  };
+
   const handleCreatePin = async (pinData) => {
     try {
       const newPinData = {
@@ -5811,10 +5861,7 @@ export default function SilasPlatform() {
 
         {/* Simple Admin Button */}
         <button
-          onClick={() => {
-            console.log('Admin panel - manage pin proposals and issues');
-            alert('Admin Panel: Pin proposals, issue management, and moderation tools (coming soon)');
-          }}
+          onClick={() => setShowAdminPanel(true)}
           className="mr-4 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
           title="Admin Panel"
         >
@@ -6031,6 +6078,30 @@ export default function SilasPlatform() {
         />
       )}
 
+      {/* Bulk Pin Modal */}
+      <BulkPinModal
+        isOpen={showBulkPinModal}
+        onClose={() => {
+          setShowBulkPinModal(false);
+          setBulkPinCenter(null);
+        }}
+        centerPosition={bulkPinCenter}
+        onConfirm={handleBulkPinCreation}
+      />
+
+      {/* Quick Pin Modal */}
+      <QuickPinModal
+        isOpen={showQuickPin}
+        onClose={() => setShowQuickPin(false)}
+        onSubmit={handleCreatePin}
+      />
+
+      {/* Admin Panel */}
+      <AdminPanel
+        isOpen={showAdminPanel}
+        onClose={() => setShowAdminPanel(false)}
+      />
+
       {boundsWarning && (
         <div className="absolute top-32 left-1/2 -translate-x-1/2 z-50 bg-red-500 text-white px-6 py-4 rounded-lg shadow-xl border-2 border-red-600 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="flex items-center gap-3">
@@ -6070,10 +6141,7 @@ export default function SilasPlatform() {
 
       {/* Mobile Quick Pin Button */}
       <button
-        onClick={() => {
-          // TODO: Add mobile quick pin modal
-          console.log('Mobile quick pin');
-        }}
+        onClick={() => setShowQuickPin(true)}
         className="fixed bottom-20 right-4 z-40 h-14 w-14 rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center md:hidden"
         title="Quick Pin"
       >
