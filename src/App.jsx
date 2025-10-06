@@ -1965,7 +1965,7 @@ function renderTool(tool, layer, onClose) {
     'Pulse': {
       'Analytics Dashboard': () => <AnalyticsDashboard layer={layer} onClose={onClose} />,
       'Health Metrics': () => <HealthMetrics layer={layer} onClose={onClose} />,
-      'Engagement Tracker': () => renderTool('Engagement Tracker', layer, onClose),
+      'Demographics Comparison': () => <DemographicComparison layer={layer} onClose={onClose} />,
       'Trend Analysis': () => renderTool('Trend Analysis', layer, onClose)
     },
     'Commerce': {
@@ -3253,6 +3253,9 @@ function FindTutor({ layer, onClose }) {
   );
 }
 
+// Import census data utility
+import { censusData, getDemographicComparison, getCommunityInsights, formatPercentage, formatPopulation } from '../utils/censusData.js';
+
 // Pulse Layer Quick Actions
 function ViewReports({ layer, onClose }) {
   const [reportType, setReportType] = useState('Community Overview');
@@ -3274,6 +3277,22 @@ function ViewReports({ layer, onClose }) {
         { name: 'Event Participation', value: '68%', change: '+12%', trend: 'up' },
         { name: 'Voting Turnout', value: '72%', change: '+8%', trend: 'up' }
       ]
+    },
+    'Demographic Analysis': {
+      metrics: [
+        { name: 'Total Population', value: formatPopulation(censusData.stoneclough.totalPopulation), change: 'vs Bolton', trend: 'neutral', comparison: formatPopulation(censusData.bolton.totalPopulation) },
+        { name: 'Young Professionals (25-34)', value: formatPercentage(censusData.stoneclough.ageGroups['25-34']), change: '+2.1%', trend: 'up', comparison: `vs Bolton ${formatPercentage(censusData.bolton.ageGroups['25-34'])}` },
+        { name: 'Higher Education', value: formatPercentage(censusData.stoneclough.education.level4Plus), change: '+4.9%', trend: 'up', comparison: `vs England ${formatPercentage(censusData.england.education.level4Plus)}` },
+        { name: 'Home Ownership', value: formatPercentage(censusData.stoneclough.housing.owned), change: '+19.5%', trend: 'up', comparison: `vs England ${formatPercentage(censusData.england.housing.owned)}` }
+      ]
+    },
+    'Community Comparison': {
+      metrics: [
+        { name: 'Employment Rate', value: formatPercentage(censusData.stoneclough.employment.employed), change: '+6.1%', trend: 'up', comparison: `vs Bolton ${formatPercentage(censusData.bolton.employment.employed)}` },
+        { name: 'Families (35-49)', value: formatPercentage(censusData.stoneclough.ageGroups['35-49']), change: '+4.5%', trend: 'up', comparison: `vs Bolton ${formatPercentage(censusData.bolton.ageGroups['35-49'])}` },
+        { name: 'Senior Citizens (65+)', value: formatPercentage(censusData.stoneclough.ageGroups['65+']), change: '-6.0%', trend: 'down', comparison: `vs Bolton ${formatPercentage(censusData.bolton.ageGroups['65+'])}` },
+        { name: 'Social Housing', value: formatPercentage(censusData.stoneclough.housing.socialRented), change: '-8.6%', trend: 'down', comparison: `vs Bolton ${formatPercentage(censusData.bolton.housing.socialRented)}` }
+      ]
     }
   };
 
@@ -3294,8 +3313,8 @@ function ViewReports({ layer, onClose }) {
           >
             <option>Community Overview</option>
             <option>Engagement Analytics</option>
-            <option>Project Progress</option>
-            <option>Economic Impact</option>
+            <option>Demographic Analysis</option>
+            <option>Community Comparison</option>
           </select>
         </div>
         <div>
@@ -3325,11 +3344,17 @@ function ViewReports({ layer, onClose }) {
               </div>
               <div className="text-right">
                 <div className={`text-sm flex items-center gap-1 ${
-                  metric.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                  metric.trend === 'up' ? 'text-green-600' :
+                  metric.trend === 'down' ? 'text-red-600' : 'text-gray-600'
                 }`}>
-                  <span>{metric.trend === 'up' ? '↗️' : '↘️'}</span>
+                  <span>{metric.trend === 'up' ? '↗️' : metric.trend === 'down' ? '↘️' : '➡️'}</span>
                   {metric.change}
                 </div>
+                {metric.comparison && (
+                  <div className="text-xs text-gray-500 mt-1">
+                    {metric.comparison}
+                  </div>
+                )}
               </div>
             </div>
           </Card>
@@ -4202,26 +4227,39 @@ function TrackKPIs({ layer, onClose }) {
 function GenerateInsights({ layer, onClose }) {
   const [insightType, setInsightType] = useState('Community Trends');
   const [timeframe, setTimeframe] = useState('Last 30 Days');
-  const [insights, setInsights] = useState([
-    {
-      title: "Community Engagement Peak",
-      description: "Engagement rates are 23% higher on weekends, particularly Saturday afternoons.",
-      impact: "High",
-      recommendation: "Schedule more community events on Saturday afternoons to maximize participation."
-    },
-    {
-      title: "Project Completion Patterns",
-      description: "Projects with 8-12 volunteers have 85% higher completion rates than smaller teams.",
-      impact: "Medium",
-      recommendation: "Encourage project leaders to recruit optimal team sizes for better outcomes."
-    },
-    {
-      title: "Demographic Participation Gap",
-      description: "Residents aged 25-35 show 40% lower participation in community activities.",
-      impact: "High",
-      recommendation: "Create targeted outreach programs and flexible scheduling for young professionals."
-    }
-  ]);
+
+  // Generate insights based on census data and community patterns
+  const generateCensusInsights = () => {
+    const communityInsights = getCommunityInsights();
+    const behavioralInsights = [
+      {
+        title: "Weekend Engagement Peak",
+        description: "Community engagement rates are 23% higher on weekends, particularly Saturday afternoons.",
+        impact: "High",
+        recommendation: "Schedule more community events on Saturday afternoons to maximize participation."
+      },
+      {
+        title: "Young Professional Opportunity",
+        description: `With ${formatPercentage(censusData.stoneclough.ageGroups['25-34'])} young professionals vs ${formatPercentage(censusData.bolton.ageGroups['25-34'])} in Bolton, there's untapped potential.`,
+        impact: "High",
+        recommendation: "Create networking events and career development programs targeting 25-34 age group."
+      },
+      {
+        title: "High Education Advantage",
+        description: `${formatPercentage(censusData.stoneclough.education.level4Plus)} of residents have higher education vs ${formatPercentage(censusData.england.education.level4Plus)} England average.`,
+        impact: "Medium",
+        recommendation: "Leverage high education levels for knowledge sharing, mentorship, and skill-based volunteering."
+      }
+    ];
+    return [...communityInsights.map(insight => ({
+      title: insight.category + " Advantage",
+      description: insight.insight,
+      impact: insight.impact === 'Positive' ? 'High' : 'Medium',
+      recommendation: insight.recommendation
+    })), ...behavioralInsights];
+  };
+
+  const [insights, setInsights] = useState(generateCensusInsights());
 
   return (
     <div className="p-4 space-y-4">
@@ -4239,9 +4277,9 @@ function GenerateInsights({ layer, onClose }) {
             onChange={(e) => setInsightType(e.target.value)}
           >
             <option>Community Trends</option>
+            <option>Demographic Insights</option>
             <option>Participation Patterns</option>
-            <option>Project Analytics</option>
-            <option>Demographic Analysis</option>
+            <option>Comparative Analysis</option>
           </select>
         </div>
         <div>
@@ -4285,6 +4323,107 @@ function GenerateInsights({ layer, onClose }) {
       <Button className="w-full" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
         Generate New Insights
       </Button>
+    </div>
+  );
+}
+
+// Demographic Comparison Component
+function DemographicComparison({ layer, onClose }) {
+  const [selectedMetric, setSelectedMetric] = useState('ageGroups');
+  const [selectedCategory, setSelectedCategory] = useState('25-34');
+
+  const metricOptions = {
+    ageGroups: { label: 'Age Groups', categories: ['0-15', '16-24', '25-34', '35-49', '50-64', '65+'] },
+    employment: { label: 'Employment', categories: ['employed', 'unemployed', 'inactive'] },
+    education: { label: 'Education', categories: ['noQualifications', 'level1', 'level2', 'level3', 'level4Plus'] },
+    housing: { label: 'Housing', categories: ['owned', 'socialRented', 'privateRented'] },
+    ethnicity: { label: 'Ethnicity', categories: ['white', 'asian', 'black', 'mixed'] }
+  };
+
+  const comparisonData = getDemographicComparison(selectedMetric, selectedCategory);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Community Demographics</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Metric</label>
+          <select
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            value={selectedMetric}
+            onChange={(e) => {
+              setSelectedMetric(e.target.value);
+              setSelectedCategory(metricOptions[e.target.value].categories[0]);
+            }}
+          >
+            {Object.entries(metricOptions).map(([key, option]) => (
+              <option key={key} value={key}>{option.label}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+          <select
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            value={selectedCategory}
+            onChange={(e) => setSelectedCategory(e.target.value)}
+          >
+            {metricOptions[selectedMetric].categories.map(category => (
+              <option key={category} value={category}>
+                {category.replace(/([A-Z])/g, ' $1').replace(/^\w/, c => c.toUpperCase())}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {comparisonData.map((area, index) => (
+          <Card key={area.area} className="p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <h4 className="font-medium text-gray-900">{area.area}</h4>
+                <p className="text-sm text-gray-600">Population: {formatPopulation(area.population)}</p>
+              </div>
+              <div className="text-right">
+                <div className="text-lg font-bold" style={{
+                  color: index === 0 ? LAYER_CONFIG[layer]?.color : '#6B7280'
+                }}>
+                  {formatPercentage(area.value)}
+                </div>
+                {index === 0 && (
+                  <div className="text-xs text-blue-600 font-medium">Our Community</div>
+                )}
+              </div>
+            </div>
+            <div className="mt-2">
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="h-2 rounded-full transition-all"
+                  style={{
+                    width: `${(area.value / Math.max(...comparisonData.map(d => d.value))) * 100}%`,
+                    backgroundColor: index === 0 ? LAYER_CONFIG[layer]?.color : '#9CA3AF'
+                  }}
+                />
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <div className="p-3 bg-blue-50 rounded-lg">
+        <h4 className="font-medium text-blue-900 mb-1">Community Insight</h4>
+        <p className="text-sm text-blue-800">
+          {comparisonData[0].value > comparisonData[1].value
+            ? `Stoneclough has a ${((comparisonData[0].value - comparisonData[1].value)).toFixed(1)}% higher rate than Bolton average.`
+            : `Stoneclough has a ${((comparisonData[1].value - comparisonData[0].value)).toFixed(1)}% lower rate than Bolton average.`
+          }
+        </p>
+      </div>
     </div>
   );
 }
@@ -4560,7 +4699,7 @@ function PageOverlay({ layer, onClose, onFlyTo, onSelectFeature, onShowMetrics, 
     Pulse: {
       title: 'Community Data & KPIs',
       description: 'Tracking community health, engagement, and progress metrics',
-      tools: ['Analytics Dashboard', 'Health Metrics', 'Engagement Tracker', 'Trend Analysis'],
+      tools: ['Analytics Dashboard', 'Health Metrics', 'Demographics Comparison', 'Trend Analysis'],
       actions: ['View Reports', 'Set Goals', 'Track KPIs', 'Generate Insights']
     },
     Commerce: {
