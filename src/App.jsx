@@ -562,6 +562,326 @@ function DataInspector({ feature, onClose }) {
   );
 }
 
+// Economy Layer Tools
+function BusinessDirectory({ layer, onClose }) {
+  const [businesses, setBusinesses] = useState([
+    { id: 1, name: "Stoneclough Bakery", category: "Food & Dining", rating: 4.8, contact: "01234 567890", status: "Open" },
+    { id: 2, name: "Green Valley Farm", category: "Agriculture", rating: 4.9, contact: "01234 567891", status: "Open" },
+    { id: 3, name: "Local Crafts Co.", category: "Retail", rating: 4.6, contact: "01234 567892", status: "Open" }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Business Directory</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="outline" className="text-xs">Search</Button>
+        <Button className="text-xs" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+          List Business
+        </Button>
+      </div>
+
+      <div className="space-y-3">
+        {businesses.map(business => (
+          <Card key={business.id} className="p-3 hover:shadow-md transition-shadow">
+            <div className="space-y-2">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{business.name}</h4>
+                  <p className="text-sm text-gray-600">{business.category}</p>
+                  <p className="text-xs text-gray-500">{business.contact}</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-medium" style={{ color: LAYER_CONFIG[layer]?.color }}>
+                    ⭐ {business.rating}
+                  </div>
+                  <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                    {business.status}
+                  </span>
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button size="sm" variant="outline" className="text-xs flex-1">Contact</Button>
+                <Button size="sm" className="text-xs flex-1" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+                  Support
+                </Button>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function EconomicIndicators({ layer, onClose }) {
+  const [indicators, setIndicators] = useState([
+    { name: "Local Employment", value: "94.2%", change: "+2.1%", trend: "up" },
+    { name: "Business Growth", value: "12", change: "+3", trend: "up" },
+    { name: "Local Spending", value: "£2.4M", change: "+8.5%", trend: "up" },
+    { name: "Property Values", value: "£185k", change: "+3.2%", trend: "up" }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Economic Indicators</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        {indicators.map((indicator, index) => (
+          <Card key={index} className="p-3">
+            <div className="space-y-1">
+              <h4 className="text-sm font-medium text-gray-700">{indicator.name}</h4>
+              <div className="text-lg font-bold" style={{ color: LAYER_CONFIG[layer]?.color }}>
+                {indicator.value}
+              </div>
+              <div className={`text-xs flex items-center gap-1 ${
+                indicator.trend === 'up' ? 'text-green-600' : 'text-red-600'
+              }`}>
+                <span>{indicator.trend === 'up' ? '↗️' : '↘️'}</span>
+                {indicator.change}
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <Button className="w-full" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+        View Detailed Report
+      </Button>
+    </div>
+  );
+}
+
+function InvestmentOpportunities({ layer, onClose }) {
+  const [opportunities, setOpportunities] = useState([
+    { id: 1, title: "Community Solar Project", amount: "£50k", returns: "8.5% annually", risk: "Low", deadline: "30 days" },
+    { id: 2, title: "Local Food Hub", amount: "£25k", returns: "12% annually", risk: "Medium", deadline: "45 days" },
+    { id: 3, title: "Artisan Workshop Space", amount: "£15k", returns: "10% annually", risk: "Low", deadline: "60 days" }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Investment Opportunities</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <Button className="w-full" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+        Submit Investment Proposal
+      </Button>
+
+      <div className="space-y-3">
+        {opportunities.map(opportunity => (
+          <Card key={opportunity.id} className="p-3">
+            <div className="space-y-2">
+              <h4 className="font-medium text-gray-900">{opportunity.title}</h4>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-gray-500">Amount: </span>
+                  <span className="font-medium">{opportunity.amount}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Returns: </span>
+                  <span className="font-medium text-green-600">{opportunity.returns}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Risk: </span>
+                  <span className={`font-medium ${
+                    opportunity.risk === 'Low' ? 'text-green-600' :
+                    opportunity.risk === 'Medium' ? 'text-yellow-600' : 'text-red-600'
+                  }`}>{opportunity.risk}</span>
+                </div>
+                <div>
+                  <span className="text-gray-500">Deadline: </span>
+                  <span className="font-medium">{opportunity.deadline}</span>
+                </div>
+              </div>
+              <Button size="sm" className="w-full text-xs" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+                Learn More
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SkillsExchange({ layer, onClose }) {
+  const [skills, setSkills] = useState([
+    { id: 1, person: "Sarah M.", offering: "Web Design", seeking: "Gardening Help", rating: 4.9 },
+    { id: 2, person: "John D.", offering: "Carpentry", seeking: "Accounting", rating: 4.7 },
+    { id: 3, person: "Emma L.", offering: "Tutoring", seeking: "Car Maintenance", rating: 4.8 }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Skills Exchange</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="outline" className="text-xs">My Skills</Button>
+        <Button className="text-xs" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+          Add Skill
+        </Button>
+      </div>
+
+      <div className="space-y-3">
+        {skills.map(skill => (
+          <Card key={skill.id} className="p-3">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <h4 className="font-medium text-gray-900">{skill.person}</h4>
+                <div className="text-sm" style={{ color: LAYER_CONFIG[layer]?.color }}>
+                  ⭐ {skill.rating}
+                </div>
+              </div>
+              <div className="text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-green-600">Offering:</span>
+                  <span className="font-medium">{skill.offering}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-blue-600">Seeking:</span>
+                  <span className="font-medium">{skill.seeking}</span>
+                </div>
+              </div>
+              <Button size="sm" className="w-full text-xs" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+                Connect
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Works Layer Tools
+function ProjectTracker({ layer, onClose }) {
+  const [projects, setProjects] = useState([
+    { id: 1, name: "Community Garden Expansion", progress: 75, volunteers: 12, deadline: "March 2025", status: "On Track" },
+    { id: 2, name: "Playground Renovation", progress: 45, volunteers: 8, deadline: "April 2025", status: "Needs Help" },
+    { id: 3, name: "Village Hall Repairs", progress: 90, volunteers: 15, deadline: "February 2025", status: "Nearly Done" }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Project Tracker</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <Button className="w-full" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+        Start New Project
+      </Button>
+
+      <div className="space-y-3">
+        {projects.map(project => (
+          <Card key={project.id} className="p-3">
+            <div className="space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{project.name}</h4>
+                  <p className="text-sm text-gray-600">{project.volunteers} volunteers • Due {project.deadline}</p>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  project.status === 'On Track' ? 'bg-green-100 text-green-800' :
+                  project.status === 'Needs Help' ? 'bg-red-100 text-red-800' :
+                  'bg-blue-100 text-blue-800'
+                }`}>
+                  {project.status}
+                </span>
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span>Progress</span>
+                  <span>{project.progress}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="h-2 rounded-full transition-all"
+                    style={{
+                      width: `${project.progress}%`,
+                      backgroundColor: LAYER_CONFIG[layer]?.color
+                    }}
+                  />
+                </div>
+              </div>
+              <Button size="sm" className="w-full text-xs" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+                Join Project
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ResourceManager({ layer, onClose }) {
+  const [resources, setResources] = useState([
+    { id: 1, item: "Power Tools", available: 3, total: 5, location: "Community Center", contact: "John D." },
+    { id: 2, item: "Garden Equipment", available: 7, total: 10, location: "Village Hall", contact: "Sarah M." },
+    { id: 3, item: "Paint & Brushes", available: 0, total: 8, location: "Storage Shed", contact: "Mike R." }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Resource Manager</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="outline" className="text-xs">Request Resource</Button>
+        <Button className="text-xs" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+          Donate Resource
+        </Button>
+      </div>
+
+      <div className="space-y-3">
+        {resources.map(resource => (
+          <Card key={resource.id} className="p-3">
+            <div className="space-y-2">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{resource.item}</h4>
+                  <p className="text-sm text-gray-600">{resource.location}</p>
+                  <p className="text-xs text-gray-500">Contact: {resource.contact}</p>
+                </div>
+                <div className="text-right">
+                  <div className={`text-sm font-medium ${
+                    resource.available > 0 ? 'text-green-600' : 'text-red-600'
+                  }`}>
+                    {resource.available}/{resource.total} available
+                  </div>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                className="w-full text-xs"
+                disabled={resource.available === 0}
+                style={{ backgroundColor: resource.available > 0 ? LAYER_CONFIG[layer]?.color : '#gray' }}
+              >
+                {resource.available > 0 ? 'Reserve' : 'Out of Stock'}
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Tool Renderer Function
 function renderTool(tool, layer, onClose) {
   const toolComponents = {
@@ -570,6 +890,18 @@ function renderTool(tool, layer, onClose) {
       'Prayer Requests': () => <PrayerRequests layer={layer} onClose={onClose} />,
       'Community Outreach': () => <CommunityOutreach layer={layer} onClose={onClose} />,
       'Volunteer Coordination': () => <VolunteerCoordination layer={layer} onClose={onClose} />
+    },
+    'Economy': {
+      'Business Directory': () => <BusinessDirectory layer={layer} onClose={onClose} />,
+      'Economic Indicators': () => <EconomicIndicators layer={layer} onClose={onClose} />,
+      'Investment Opportunities': () => <InvestmentOpportunities layer={layer} onClose={onClose} />,
+      'Skills Exchange': () => <SkillsExchange layer={layer} onClose={onClose} />
+    },
+    'Works': {
+      'Project Tracker': () => <ProjectTracker layer={layer} onClose={onClose} />,
+      'Resource Manager': () => <ResourceManager layer={layer} onClose={onClose} />,
+      'Volunteer Hub': () => renderTool('Volunteer Hub', layer, onClose),
+      'Progress Dashboard': () => renderTool('Progress Dashboard', layer, onClose)
     }
   };
 
