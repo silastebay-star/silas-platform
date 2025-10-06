@@ -3253,6 +3253,451 @@ function FindTutor({ layer, onClose }) {
   );
 }
 
+// Pulse Layer Quick Actions
+function ViewReports({ layer, onClose }) {
+  const [reportType, setReportType] = useState('Community Overview');
+  const [timeframe, setTimeframe] = useState('This Month');
+
+  const reports = {
+    'Community Overview': {
+      metrics: [
+        { name: 'Active Users', value: '234', change: '+12%', trend: 'up' },
+        { name: 'New Posts', value: '89', change: '+23%', trend: 'up' },
+        { name: 'Events Attended', value: '156', change: '+8%', trend: 'up' },
+        { name: 'Projects Active', value: '12', change: '+2', trend: 'up' }
+      ]
+    },
+    'Engagement Analytics': {
+      metrics: [
+        { name: 'Daily Active Users', value: '45', change: '+5%', trend: 'up' },
+        { name: 'Comments per Post', value: '3.2', change: '+0.4', trend: 'up' },
+        { name: 'Event Participation', value: '68%', change: '+12%', trend: 'up' },
+        { name: 'Voting Turnout', value: '72%', change: '+8%', trend: 'up' }
+      ]
+    }
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>View Reports</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Report Type</label>
+          <select
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            value={reportType}
+            onChange={(e) => setReportType(e.target.value)}
+          >
+            <option>Community Overview</option>
+            <option>Engagement Analytics</option>
+            <option>Project Progress</option>
+            <option>Economic Impact</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Timeframe</label>
+          <select
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            value={timeframe}
+            onChange={(e) => setTimeframe(e.target.value)}
+          >
+            <option>This Week</option>
+            <option>This Month</option>
+            <option>Last 3 Months</option>
+            <option>This Year</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {reports[reportType]?.metrics.map((metric, index) => (
+          <Card key={index} className="p-3">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <h4 className="font-medium text-gray-900">{metric.name}</h4>
+                <div className="text-2xl font-bold" style={{ color: LAYER_CONFIG[layer]?.color }}>
+                  {metric.value}
+                </div>
+              </div>
+              <div className="text-right">
+                <div className={`text-sm flex items-center gap-1 ${
+                  metric.trend === 'up' ? 'text-green-600' : 'text-red-600'
+                }`}>
+                  <span>{metric.trend === 'up' ? '↗️' : '↘️'}</span>
+                  {metric.change}
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Button variant="outline" className="text-xs">Export PDF</Button>
+        <Button className="text-xs" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+          Schedule Report
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function SetGoals({ layer, onClose }) {
+  const [goals, setGoals] = useState([
+    { id: 1, title: 'Increase Community Participation', target: 300, current: 234, deadline: '2025-03-01', category: 'Engagement' },
+    { id: 2, title: 'Complete 5 Community Projects', target: 5, current: 3, deadline: '2025-06-01', category: 'Projects' },
+    { id: 3, title: 'Host 12 Monthly Events', target: 12, current: 8, deadline: '2025-12-01', category: 'Events' }
+  ]);
+
+  const [newGoal, setNewGoal] = useState({
+    title: '',
+    target: '',
+    deadline: '',
+    category: 'Engagement'
+  });
+
+  const addGoal = () => {
+    if (newGoal.title && newGoal.target && newGoal.deadline) {
+      setGoals(prev => [...prev, {
+        id: Date.now(),
+        ...newGoal,
+        current: 0,
+        target: parseInt(newGoal.target)
+      }]);
+      setNewGoal({ title: '', target: '', deadline: '', category: 'Engagement' });
+    }
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Set Goals</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="space-y-3">
+        <h4 className="font-medium">Current Goals</h4>
+        {goals.map(goal => (
+          <Card key={goal.id} className="p-3">
+            <div className="space-y-2">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h5 className="font-medium text-gray-900">{goal.title}</h5>
+                  <p className="text-sm text-gray-600">{goal.category} • Due: {new Date(goal.deadline).toLocaleDateString()}</p>
+                </div>
+                <span className="text-sm font-medium" style={{ color: LAYER_CONFIG[layer]?.color }}>
+                  {goal.current}/{goal.target}
+                </span>
+              </div>
+              <div className="space-y-1">
+                <div className="flex justify-between text-sm">
+                  <span>Progress</span>
+                  <span>{Math.round((goal.current / goal.target) * 100)}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="h-2 rounded-full transition-all"
+                    style={{
+                      width: `${Math.min((goal.current / goal.target) * 100, 100)}%`,
+                      backgroundColor: LAYER_CONFIG[layer]?.color
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+        <h4 className="font-medium">Add New Goal</h4>
+        <div>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm mb-2"
+            placeholder="Goal title"
+            value={newGoal.title}
+            onChange={(e) => setNewGoal({...newGoal, title: e.target.value})}
+          />
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          <input
+            type="number"
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+            placeholder="Target"
+            value={newGoal.target}
+            onChange={(e) => setNewGoal({...newGoal, target: e.target.value})}
+          />
+          <input
+            type="date"
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+            value={newGoal.deadline}
+            onChange={(e) => setNewGoal({...newGoal, deadline: e.target.value})}
+          />
+          <select
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm"
+            value={newGoal.category}
+            onChange={(e) => setNewGoal({...newGoal, category: e.target.value})}
+          >
+            <option>Engagement</option>
+            <option>Projects</option>
+            <option>Events</option>
+            <option>Economy</option>
+          </select>
+        </div>
+        <Button
+          size="sm"
+          className="w-full text-xs"
+          style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}
+          onClick={addGoal}
+        >
+          Add Goal
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// Commerce Layer Quick Actions
+function ListItem({ layer, onClose }) {
+  const [formData, setFormData] = useState({
+    title: '',
+    category: 'Food & Produce',
+    price: '',
+    condition: 'New',
+    description: '',
+    location: 'Stoneclough',
+    delivery: false,
+    images: []
+  });
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>List Item</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Item Title</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            placeholder="What are you selling?"
+            value={formData.title}
+            onChange={(e) => setFormData({...formData, title: e.target.value})}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.category}
+              onChange={(e) => setFormData({...formData, category: e.target.value})}
+            >
+              <option>Food & Produce</option>
+              <option>Crafts & Handmade</option>
+              <option>Tools & Equipment</option>
+              <option>Books & Media</option>
+              <option>Clothing & Accessories</option>
+              <option>Home & Garden</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Price</label>
+            <input
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              placeholder="£0.00"
+              value={formData.price}
+              onChange={(e) => setFormData({...formData, price: e.target.value})}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <textarea
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm h-20"
+            placeholder="Describe your item..."
+            value={formData.description}
+            onChange={(e) => setFormData({...formData, description: e.target.value})}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Condition</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.condition}
+              onChange={(e) => setFormData({...formData, condition: e.target.value})}
+            >
+              <option>New</option>
+              <option>Like New</option>
+              <option>Good</option>
+              <option>Fair</option>
+              <option>For Parts</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+            <input
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.location}
+              onChange={(e) => setFormData({...formData, location: e.target.value})}
+            />
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="delivery"
+            checked={formData.delivery}
+            onChange={(e) => setFormData({...formData, delivery: e.target.checked})}
+          />
+          <label htmlFor="delivery" className="text-sm text-gray-700">Offer delivery</label>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Button variant="outline" onClick={onClose}>Save Draft</Button>
+          <Button style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+            List Item
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OfferService({ layer, onClose }) {
+  const [formData, setFormData] = useState({
+    serviceName: '',
+    category: 'Home Services',
+    description: '',
+    pricing: 'Hourly Rate',
+    rate: '',
+    availability: 'Weekdays',
+    location: 'Local Only',
+    experience: ''
+  });
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Offer Service</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Service Name</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            placeholder="What service do you offer?"
+            value={formData.serviceName}
+            onChange={(e) => setFormData({...formData, serviceName: e.target.value})}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.category}
+              onChange={(e) => setFormData({...formData, category: e.target.value})}
+            >
+              <option>Home Services</option>
+              <option>Garden & Landscaping</option>
+              <option>Tutoring & Education</option>
+              <option>Pet Care</option>
+              <option>Technology Support</option>
+              <option>Creative Services</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Pricing Type</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.pricing}
+              onChange={(e) => setFormData({...formData, pricing: e.target.value})}
+            >
+              <option>Hourly Rate</option>
+              <option>Fixed Price</option>
+              <option>Per Project</option>
+              <option>Negotiable</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Service Description</label>
+          <textarea
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm h-20"
+            placeholder="Describe your service and what's included..."
+            value={formData.description}
+            onChange={(e) => setFormData({...formData, description: e.target.value})}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Rate</label>
+            <input
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              placeholder="£0.00"
+              value={formData.rate}
+              onChange={(e) => setFormData({...formData, rate: e.target.value})}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Availability</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.availability}
+              onChange={(e) => setFormData({...formData, availability: e.target.value})}
+            >
+              <option>Weekdays</option>
+              <option>Weekends</option>
+              <option>Evenings</option>
+              <option>Flexible</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Experience & Qualifications</label>
+          <textarea
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm h-16"
+            placeholder="Your relevant experience and qualifications..."
+            value={formData.experience}
+            onChange={(e) => setFormData({...formData, experience: e.target.value})}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Button variant="outline" onClick={onClose}>Save Draft</Button>
+          <Button style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+            Offer Service
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Quick Action Renderer Function
 function renderQuickAction(action, layer, onClose) {
   const actionComponents = {
@@ -3285,6 +3730,18 @@ function renderQuickAction(action, layer, onClose) {
       'Share Knowledge': () => <ShareKnowledge layer={layer} onClose={onClose} />,
       'Ask SILAS': () => <AskSILAS layer={layer} onClose={onClose} />,
       'Find Tutor': () => <FindTutor layer={layer} onClose={onClose} />
+    },
+    'Pulse': {
+      'View Reports': () => <ViewReports layer={layer} onClose={onClose} />,
+      'Set Goals': () => <SetGoals layer={layer} onClose={onClose} />,
+      'Track KPIs': () => renderQuickAction('Track KPIs', layer, onClose),
+      'Generate Insights': () => renderQuickAction('Generate Insights', layer, onClose)
+    },
+    'Commerce': {
+      'List Item': () => <ListItem layer={layer} onClose={onClose} />,
+      'Offer Service': () => <OfferService layer={layer} onClose={onClose} />,
+      'Make Purchase': () => renderQuickAction('Make Purchase', layer, onClose),
+      'Join Network': () => renderQuickAction('Join Network', layer, onClose)
     }
   };
 
