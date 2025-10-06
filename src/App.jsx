@@ -268,9 +268,38 @@ function MapboxCentral({ mapData, kmlUrl, onSelect, mapApiRef, activeLayer, onRi
 
     const pointColor = activeLayer === 'All' ? colorExpression : layerColor;
 
+    // Create dynamic sizing based on active layer
+    const sizeExpression = activeLayer === 'All'
+      ? 8 // Default size when viewing all layers
+      : [
+          'case',
+          ['==', ['get', 'layer'], activeLayer],
+          12, // Larger size for active layer pins
+          6   // Smaller size for inactive layer pins
+        ];
+
     // Update paint properties
-    if (map.getLayer("clusters")) map.setPaintProperty("clusters", "circle-color", activeLayer === 'All' ? LAYER_CONFIG.All.color : layerColor);
-    if (map.getLayer("unclustered-point")) map.setPaintProperty("unclustered-point", "circle-color", pointColor);
+    if (map.getLayer("clusters")) {
+      map.setPaintProperty("clusters", "circle-color", activeLayer === 'All' ? LAYER_CONFIG.All.color : layerColor);
+      // Make clusters for active layer larger too
+      const clusterSize = activeLayer === 'All'
+        ? ["step", ["get", "point_count"], 15, 10, 20, 30, 25]
+        : ["step", ["get", "point_count"], 18, 10, 24, 30, 30];
+      map.setPaintProperty("clusters", "circle-radius", clusterSize);
+    }
+
+    if (map.getLayer("unclustered-point")) {
+      map.setPaintProperty("unclustered-point", "circle-color", pointColor);
+      map.setPaintProperty("unclustered-point", "circle-radius", sizeExpression);
+      // Add subtle glow effect for active layer pins
+      const strokeWidth = activeLayer === 'All' ? 2 : [
+        'case',
+        ['==', ['get', 'layer'], activeLayer],
+        3, // Thicker stroke for active layer
+        1  // Thinner stroke for inactive layers
+      ];
+      map.setPaintProperty("unclustered-point", "circle-stroke-width", strokeWidth);
+    }
 
     // Set filter
     const filter = activeLayer && activeLayer !== 'All' ? ["==", ["get", "layer"], activeLayer] : null;
@@ -533,10 +562,43 @@ function DataInspector({ feature, onClose }) {
   );
 }
 
+// Tool Renderer Function
+function renderTool(tool, layer, onClose) {
+  const toolComponents = {
+    'Faith': {
+      'Event Calendar': () => <EventCalendar layer={layer} onClose={onClose} />,
+      'Prayer Requests': () => <PrayerRequests layer={layer} onClose={onClose} />,
+      'Community Outreach': () => <CommunityOutreach layer={layer} onClose={onClose} />,
+      'Volunteer Coordination': () => <VolunteerCoordination layer={layer} onClose={onClose} />
+    }
+  };
+
+  const layerTools = toolComponents[layer];
+  if (layerTools && layerTools[tool]) {
+    return layerTools[tool]();
+  }
+
+  // Default tool placeholder for tools not yet implemented
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>{tool}</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+      <div className="text-center py-8 text-gray-500">
+        <div className="text-4xl mb-2">🚧</div>
+        <p className="font-medium">Coming Soon</p>
+        <p className="text-sm">This tool is under development</p>
+      </div>
+    </div>
+  );
+}
+
 function PageOverlay({ layer, onClose, onFlyTo, onSelectFeature, onShowMetrics, onPinAction, onVote }) {
   const Icon = LAYER_CONFIG[layer]?.icon;
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeTool, setActiveTool] = useState(null);
 
   const layerDetails = {
     Faith: {
@@ -610,6 +672,15 @@ function PageOverlay({ layer, onClose, onFlyTo, onSelectFeature, onShowMetrics, 
     onClose();
   };
 
+  // If a tool is active, show the tool content
+  if (activeTool) {
+    return (
+      <div className="h-full flex flex-col">
+        {renderTool(activeTool, layer, () => setActiveTool(null))}
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col">
       <div className="p-6 border-b" style={{ borderColor: LAYER_CONFIG[layer]?.color }}>
@@ -643,8 +714,9 @@ function PageOverlay({ layer, onClose, onFlyTo, onSelectFeature, onShowMetrics, 
                 key={index}
                 variant="outline"
                 size="sm"
-                className="text-xs justify-start"
+                className="text-xs justify-start hover:shadow-md transition-all"
                 style={{ borderColor: LAYER_CONFIG[layer]?.color + '40', color: LAYER_CONFIG[layer]?.color }}
+                onClick={() => setActiveTool(tool)}
               >
                 {tool}
               </Button>
@@ -660,8 +732,12 @@ function PageOverlay({ layer, onClose, onFlyTo, onSelectFeature, onShowMetrics, 
               <Button
                 key={index}
                 size="sm"
-                className="text-xs justify-start"
+                className="text-xs justify-start hover:shadow-md transition-all"
                 style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}
+                onClick={() => {
+                  // Handle quick actions here
+                  console.log(`Performing action: ${action} for layer: ${layer}`);
+                }}
               >
                 {action}
               </Button>
@@ -902,6 +978,177 @@ function SocialFeedModal({ pins, activeLayer, onItemClick }) {
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// Faith Layer Tools
+function EventCalendar({ layer, onClose }) {
+  const [events, setEvents] = useState([
+    { id: 1, title: "Sunday Service", date: "2025-01-12", time: "10:00 AM", location: "Community Center", attendees: 45 },
+    { id: 2, title: "Prayer Circle", date: "2025-01-15", time: "7:00 PM", location: "Parish Hall", attendees: 12 },
+    { id: 3, title: "Community Outreach", date: "2025-01-18", time: "2:00 PM", location: "Town Square", attendees: 28 }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Event Calendar</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <Button className="w-full" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+        <Church size={16} className="mr-2" />
+        Schedule New Event
+      </Button>
+
+      <div className="space-y-3">
+        {events.map(event => (
+          <Card key={event.id} className="p-3 hover:shadow-md transition-shadow">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h4 className="font-medium text-gray-900">{event.title}</h4>
+                <p className="text-sm text-gray-600">{event.date} at {event.time}</p>
+                <p className="text-xs text-gray-500">{event.location}</p>
+              </div>
+              <div className="text-right">
+                <div className="text-sm font-medium" style={{ color: LAYER_CONFIG[layer]?.color }}>
+                  {event.attendees} attending
+                </div>
+                <Button size="sm" variant="outline" className="mt-1 text-xs">Join</Button>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PrayerRequests({ layer, onClose }) {
+  const [requests, setRequests] = useState([
+    { id: 1, request: "Healing for Mrs. Johnson", author: "Anonymous", prayers: 23, date: "2 days ago" },
+    { id: 2, request: "Safe travels for the youth group", author: "Pastor Mike", prayers: 15, date: "1 day ago" },
+    { id: 3, request: "Community unity and peace", author: "Sarah M.", prayers: 31, date: "3 hours ago" }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Prayer Requests</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <Button className="w-full" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+        Submit Prayer Request
+      </Button>
+
+      <div className="space-y-3">
+        {requests.map(request => (
+          <Card key={request.id} className="p-3">
+            <div className="space-y-2">
+              <p className="text-sm text-gray-800">{request.request}</p>
+              <div className="flex items-center justify-between text-xs text-gray-500">
+                <span>by {request.author} • {request.date}</span>
+                <div className="flex items-center gap-2">
+                  <span>{request.prayers} prayers</span>
+                  <Button size="sm" variant="outline" className="text-xs px-2 py-1">
+                    🙏 Pray
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function CommunityOutreach({ layer, onClose }) {
+  const [programs, setPrograms] = useState([
+    { id: 1, name: "Food Bank", description: "Weekly food distribution", volunteers: 12, nextDate: "Saturday 9 AM" },
+    { id: 2, name: "Elderly Care", description: "Visiting and assistance", volunteers: 8, nextDate: "Sunday 2 PM" },
+    { id: 3, name: "Youth Mentoring", description: "After-school programs", volunteers: 15, nextDate: "Weekdays 4 PM" }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Community Outreach</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <Button className="w-full" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+        Start New Program
+      </Button>
+
+      <div className="space-y-3">
+        {programs.map(program => (
+          <Card key={program.id} className="p-3">
+            <div className="space-y-2">
+              <h4 className="font-medium text-gray-900">{program.name}</h4>
+              <p className="text-sm text-gray-600">{program.description}</p>
+              <div className="flex items-center justify-between">
+                <div className="text-xs text-gray-500">
+                  {program.volunteers} volunteers • Next: {program.nextDate}
+                </div>
+                <Button size="sm" variant="outline" className="text-xs">
+                  Volunteer
+                </Button>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function VolunteerCoordination({ layer, onClose }) {
+  const [opportunities, setOpportunities] = useState([
+    { id: 1, role: "Sunday School Teacher", commitment: "Weekly", skills: "Teaching, Patience", spots: 2 },
+    { id: 2, role: "Music Ministry", commitment: "Bi-weekly", skills: "Musical ability", spots: 3 },
+    { id: 3, role: "Community Garden", commitment: "Monthly", skills: "Gardening", spots: 5 }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Volunteer Coordination</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="outline" className="text-xs">My Commitments</Button>
+        <Button className="text-xs" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+          Post Opportunity
+        </Button>
+      </div>
+
+      <div className="space-y-3">
+        {opportunities.map(opportunity => (
+          <Card key={opportunity.id} className="p-3">
+            <div className="space-y-2">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{opportunity.role}</h4>
+                  <p className="text-xs text-gray-600">Commitment: {opportunity.commitment}</p>
+                  <p className="text-xs text-gray-500">Skills: {opportunity.skills}</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-medium" style={{ color: LAYER_CONFIG[layer]?.color }}>
+                    {opportunity.spots} spots
+                  </div>
+                  <Button size="sm" className="mt-1 text-xs" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+                    Apply
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -1178,10 +1425,7 @@ export default function SilasPlatform() {
     }
   };
 
-  const openPageOverlay = (layer) => {
-    setOpenPage(layer);
-    setActiveLayer(layer);
-  };
+
 
   const LayerIcon = activeLayer ? LAYER_CONFIG[activeLayer]?.icon : Briefcase;
 
@@ -1212,26 +1456,34 @@ export default function SilasPlatform() {
         </div>
         <nav className="flex gap-2 text-sm">
           {Object.keys(LAYER_CONFIG).map((layer) => (
-            <div key={layer} className="flex items-center">
-              <button
-                onClick={() => { setActiveLayer(layer); setOpenPage(null); }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-l-full font-medium transition-all ${activeLayer === layer ? "shadow-md text-white" : "text-gray-600 hover:bg-gray-100"}`}
-                style={activeLayer === layer ? { backgroundColor: LAYER_CONFIG[layer].color } : {}}
-              >
-                {React.createElement(LAYER_CONFIG[layer].icon, { size: 14 })}
-                {layer}
-              </button>
-              {layer !== "All" && (
-                <button
-                  onClick={() => openPageOverlay(layer)}
-                  className={`px-2 py-1.5 rounded-r-full text-xs font-medium transition-all border-l ${openPage === layer ? "shadow-md text-white" : "text-gray-600 hover:bg-gray-100"}`}
-                  style={openPage === layer ? { backgroundColor: LAYER_CONFIG[layer].color } : {}}
-                  title={`Open ${layer} Page`}
-                >
-                  Page
-                </button>
-              )}
-            </div>
+            <button
+              key={layer}
+              onClick={() => {
+                if (activeLayer === layer && openPage === layer) {
+                  // If clicking the same active layer with open page, close the page
+                  setOpenPage(null);
+                } else if (activeLayer === layer) {
+                  // If clicking the same active layer without open page, open the page
+                  setOpenPage(layer !== "All" ? layer : null);
+                } else {
+                  // If clicking a different layer, set it as active and open its page
+                  setActiveLayer(layer);
+                  setOpenPage(layer !== "All" ? layer : null);
+                }
+              }}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-medium transition-all ${
+                activeLayer === layer
+                  ? openPage === layer
+                    ? "shadow-lg text-white ring-2 ring-white/30"
+                    : "shadow-md text-white"
+                  : "text-gray-600 hover:bg-gray-100"
+              }`}
+              style={activeLayer === layer ? { backgroundColor: LAYER_CONFIG[layer].color } : {}}
+              title={layer !== "All" ? `View ${layer} layer and tools` : `View all layers`}
+            >
+              {React.createElement(LAYER_CONFIG[layer].icon, { size: 14 })}
+              {layer}
+            </button>
           ))}
         </nav>
       </header>
