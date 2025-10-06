@@ -3254,7 +3254,7 @@ function FindTutor({ layer, onClose }) {
 }
 
 // Import census data utility
-import { censusData, getDemographicComparison, getCommunityInsights, formatPercentage, formatPopulation } from '../utils/censusData.js';
+import { censusData, getDemographicComparison, getCommunityInsights, formatPercentage, formatPopulation } from './utils/censusData.js';
 
 // Pulse Layer Quick Actions
 function ViewReports({ layer, onClose }) {
