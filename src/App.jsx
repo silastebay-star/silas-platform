@@ -11,6 +11,7 @@ import { supabaseHelpers } from './lib/supabase.js';
 import { CopilotModal } from './components/CopilotModal.jsx';
 import { Progress } from '@/components/ui/progress.jsx';
 import silasLogo from './assets/silas-logo.png';
+import { censusData, getDemographicComparison, getCommunityInsights, formatPercentage, formatPopulation } from './utils/censusData.js';
 import './App.css';
 
 // Mapbox configuration with correct token
@@ -3252,9 +3253,6 @@ function FindTutor({ layer, onClose }) {
     </div>
   );
 }
-
-// Import census data utility
-import { censusData, getDemographicComparison, getCommunityInsights, formatPercentage, formatPopulation } from './utils/censusData.js';
 
 // Pulse Layer Quick Actions
 function ViewReports({ layer, onClose }) {
