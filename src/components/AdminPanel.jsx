@@ -2,55 +2,111 @@ import React, { useState, useEffect } from 'react';
 import { X, Shield, AlertTriangle, MapPin, Users, Eye, Check, Ban } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { supabaseHelpers } from '../lib/supabase.js';
 
 const AdminPanel = ({ isOpen, onClose }) => {
   const [activeTab, setActiveTab] = useState('overview');
-  const [mockData, setMockData] = useState({
-    pendingPins: [
-      { id: 1, name: 'New Community Garden', author: 'Sarah M.', priority: 'high', created: '2 hours ago', category: 'Works' },
-      { id: 2, name: 'Urgent Road Issue', author: 'John D.', priority: 'urgent', created: '30 minutes ago', category: 'Infrastructure' },
-      { id: 3, name: 'Local Business Opening', author: 'Mary K.', priority: 'normal', created: '1 day ago', category: 'Commerce' }
-    ],
-    issueFlags: [
-      { id: 1, pin: 'Broken Street Light', severity: 1, status: 'open', reported: '1 hour ago', reporter: 'Anonymous' },
-      { id: 2, pin: 'Pothole on Main St', severity: 2, status: 'in_progress', reported: '3 hours ago', reporter: 'Local Resident' },
-      { id: 3, pin: 'Graffiti Report', severity: 3, status: 'resolved', reported: '1 day ago', reporter: 'Community Watch' }
-    ],
+  const [loading, setLoading] = useState(true);
+  const [data, setData] = useState({
+    pendingPins: [],
+    issueFlags: [],
     stats: {
-      totalPins: 127,
-      pendingApproval: 3,
-      activeIssues: 2,
-      resolvedToday: 5,
-      communityMembers: 89
+      totalPins: 0,
+      pendingApproval: 0,
+      activeIssues: 0,
+      resolvedToday: 0,
+      recentActivity: 0
     }
   });
 
-  const handleApprovePin = (pinId) => {
-    setMockData(prev => ({
-      ...prev,
-      pendingPins: prev.pendingPins.filter(pin => pin.id !== pinId),
-      stats: { ...prev.stats, pendingApproval: prev.stats.pendingApproval - 1 }
-    }));
-    alert('Pin approved and published to the community!');
+  // Load real data when panel opens
+  useEffect(() => {
+    if (isOpen) {
+      loadAdminData();
+    }
+  }, [isOpen]);
+
+  const loadAdminData = async () => {
+    setLoading(true);
+    try {
+      const [stats, proposals, issues] = await Promise.all([
+        supabaseHelpers.getAdminStats(),
+        supabaseHelpers.getPinProposals('pending'),
+        supabaseHelpers.getIssueFlags()
+      ]);
+
+      setData({
+        pendingPins: proposals.map(p => ({
+          id: p.id,
+          name: p.payload?.name || 'Unnamed Pin',
+          author: p.proposer_id || 'Anonymous',
+          priority: p.payload?.priority || 'normal',
+          created: formatTimeAgo(p.created_at),
+          category: p.payload?.category || 'Unknown',
+          rawData: p
+        })),
+        issueFlags: issues.map(i => ({
+          id: i.id,
+          pin: i.pins?.name || 'Unknown Pin',
+          severity: i.severity,
+          status: i.status,
+          reported: formatTimeAgo(i.created_at),
+          reporter: i.reported_by || 'Anonymous',
+          rawData: i
+        })),
+        stats
+      });
+    } catch (error) {
+      console.error('Error loading admin data:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleRejectPin = (pinId) => {
-    setMockData(prev => ({
-      ...prev,
-      pendingPins: prev.pendingPins.filter(pin => pin.id !== pinId),
-      stats: { ...prev.stats, pendingApproval: prev.stats.pendingApproval - 1 }
-    }));
-    alert('Pin rejected and removed from queue.');
+  const formatTimeAgo = (dateString) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 60) return `${diffMins} minutes ago`;
+    if (diffHours < 24) return `${diffHours} hours ago`;
+    return `${diffDays} days ago`;
   };
 
-  const handleUpdateIssue = (issueId, newStatus) => {
-    setMockData(prev => ({
-      ...prev,
-      issueFlags: prev.issueFlags.map(issue => 
-        issue.id === issueId ? { ...issue, status: newStatus } : issue
-      )
-    }));
-    alert(`Issue status updated to: ${newStatus}`);
+  const handleApprovePin = async (pinId) => {
+    try {
+      await supabaseHelpers.approvePinProposal(pinId);
+      await loadAdminData(); // Refresh data
+      alert('Pin approved and published to the community!');
+    } catch (error) {
+      console.error('Error approving pin:', error);
+      alert('Error approving pin. Please try again.');
+    }
+  };
+
+  const handleRejectPin = async (pinId) => {
+    try {
+      await supabaseHelpers.rejectPinProposal(pinId);
+      await loadAdminData(); // Refresh data
+      alert('Pin rejected and removed from queue.');
+    } catch (error) {
+      console.error('Error rejecting pin:', error);
+      alert('Error rejecting pin. Please try again.');
+    }
+  };
+
+  const handleUpdateIssue = async (issueId, newStatus) => {
+    try {
+      await supabaseHelpers.updateIssueStatus(issueId, newStatus);
+      await loadAdminData(); // Refresh data
+      alert(`Issue status updated to: ${newStatus}`);
+    } catch (error) {
+      console.error('Error updating issue:', error);
+      alert('Error updating issue. Please try again.');
+    }
   };
 
   const getPriorityColor = (priority) => {
@@ -116,36 +172,52 @@ const AdminPanel = ({ isOpen, onClose }) => {
           <div className="p-6 max-h-[60vh] overflow-y-auto">
             {activeTab === 'overview' && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="bg-blue-50 p-4 rounded-lg">
-                    <div className="text-2xl font-bold text-blue-600">{mockData.stats.totalPins}</div>
-                    <div className="text-sm text-blue-800">Total Pins</div>
+                {loading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                    <div className="text-gray-600">Loading admin data...</div>
                   </div>
-                  <div className="bg-orange-50 p-4 rounded-lg">
-                    <div className="text-2xl font-bold text-orange-600">{mockData.stats.pendingApproval}</div>
-                    <div className="text-sm text-orange-800">Pending Approval</div>
-                  </div>
-                  <div className="bg-red-50 p-4 rounded-lg">
-                    <div className="text-2xl font-bold text-red-600">{mockData.stats.activeIssues}</div>
-                    <div className="text-sm text-red-800">Active Issues</div>
-                  </div>
-                </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-blue-50 p-4 rounded-lg">
+                        <div className="text-2xl font-bold text-blue-600">{data.stats.totalPins}</div>
+                        <div className="text-sm text-blue-800">Total Pins</div>
+                      </div>
+                      <div className="bg-orange-50 p-4 rounded-lg">
+                        <div className="text-2xl font-bold text-orange-600">{data.stats.pendingApproval}</div>
+                        <div className="text-sm text-orange-800">Pending Approval</div>
+                      </div>
+                      <div className="bg-red-50 p-4 rounded-lg">
+                        <div className="text-2xl font-bold text-red-600">{data.stats.activeIssues}</div>
+                        <div className="text-sm text-red-800">Active Issues</div>
+                      </div>
+                    </div>
 
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="font-medium mb-2">Recent Activity</h3>
-                  <div className="space-y-2 text-sm">
-                    <div>• {mockData.stats.resolvedToday} issues resolved today</div>
-                    <div>• {mockData.stats.communityMembers} active community members</div>
-                    <div>• 3 new pins submitted in the last 24 hours</div>
-                  </div>
-                </div>
+                    <div className="bg-gray-50 p-4 rounded-lg">
+                      <h3 className="font-medium mb-2">Recent Activity</h3>
+                      <div className="space-y-2 text-sm">
+                        <div>• {data.stats.resolvedToday} issues resolved today</div>
+                        <div>• {data.stats.recentActivity} activities in the last 24 hours</div>
+                        <div>• {data.stats.pendingApproval} pins awaiting approval</div>
+                      </div>
+                    </div>
+                  </>
+                )}
               </div>
             )}
 
             {activeTab === 'pins' && (
               <div className="space-y-4">
                 <h3 className="font-medium">Pins Pending Approval</h3>
-                {mockData.pendingPins.map((pin) => (
+                {loading ? (
+                  <div className="text-center py-4">Loading...</div>
+                ) : data.pendingPins.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    No pins pending approval
+                  </div>
+                ) : (
+                  data.pendingPins.map((pin) => (
                   <div key={pin.id} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -184,11 +256,7 @@ const AdminPanel = ({ isOpen, onClose }) => {
                       </div>
                     </div>
                   </div>
-                ))}
-                {mockData.pendingPins.length === 0 && (
-                  <div className="text-center py-8 text-gray-500">
-                    No pins pending approval
-                  </div>
+                  ))
                 )}
               </div>
             )}
@@ -196,7 +264,14 @@ const AdminPanel = ({ isOpen, onClose }) => {
             {activeTab === 'issues' && (
               <div className="space-y-4">
                 <h3 className="font-medium">Issue Reports</h3>
-                {mockData.issueFlags.map((issue) => (
+                {loading ? (
+                  <div className="text-center py-4">Loading...</div>
+                ) : data.issueFlags.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    No issue reports
+                  </div>
+                ) : (
+                  data.issueFlags.map((issue) => (
                   <div key={issue.id} className="border border-gray-200 rounded-lg p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex-1">
@@ -238,7 +313,8 @@ const AdminPanel = ({ isOpen, onClose }) => {
                       </div>
                     </div>
                   </div>
-                ))}
+                  ))
+                )}
               </div>
             )}
 

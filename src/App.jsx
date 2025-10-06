@@ -5749,39 +5749,20 @@ export default function SilasPlatform() {
     try {
       console.log('Creating bulk pins:', pinDataArray);
 
-      let successCount = 0;
-      for (const pinData of pinDataArray) {
-        try {
-          const newPinData = {
-            name: pinData.title,
-            description: pinData.description,
-            coords: { lat: pinData.lat, lng: pinData.lng },
-            category: pinData.category,
-            userId: 'anonymous',
-            metadata: {
-              priority: pinData.priority || 'normal',
-              bulkCreated: true,
-              createdAt: new Date().toISOString()
-            }
-          };
-
-          await supabaseHelpers.createPin(newPinData);
-          successCount++;
-        } catch (error) {
-          console.error('Error creating individual pin:', error);
-        }
-      }
+      // Use the enhanced bulk creation function
+      const createdPins = await supabaseHelpers.createBulkPins(pinDataArray);
 
       await supabaseHelpers.logActivity('bulk_pins_created', {
-        count: successCount,
-        total: pinDataArray.length
+        count: createdPins.length,
+        total: pinDataArray.length,
+        pins: createdPins.map(p => p.id)
       });
 
       setShowBulkPinModal(false);
       setBulkPinCenter(null);
       loadAllData();
 
-      alert(`Successfully created ${successCount} of ${pinDataArray.length} pins!`);
+      alert(`Successfully created ${createdPins.length} pins!`);
     } catch (error) {
       console.error('Error creating bulk pins:', error);
       alert('Error creating bulk pins. Please try again.');

@@ -2,19 +2,13 @@
 -- Adds new features to existing pin system without breaking current functionality
 
 -- Add new columns to existing pins table (if it exists)
-DO $$ 
+DO $$
 BEGIN
-    -- Add proposal system columns
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'pins' AND column_name = 'status') THEN
-        ALTER TABLE pins ADD COLUMN status text DEFAULT 'published' CHECK (status IN ('published', 'pending', 'archived', 'hidden'));
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'pins' AND column_name = 'owner_profile_id') THEN
-        ALTER TABLE pins ADD COLUMN owner_profile_id uuid REFERENCES profiles(id);
-    END IF;
-    
-    IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'pins' AND column_name = 'metadata') THEN
-        ALTER TABLE pins ADD COLUMN metadata jsonb DEFAULT '{}';
+    -- Check if pins table exists and add metadata column if missing
+    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'pins') THEN
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'pins' AND column_name = 'metadata') THEN
+            ALTER TABLE pins ADD COLUMN metadata jsonb DEFAULT '{}';
+        END IF;
     END IF;
 END $$;
 
@@ -22,12 +16,11 @@ END $$;
 CREATE TABLE IF NOT EXISTS pin_proposals (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   pin_id uuid REFERENCES pins(id) ON DELETE CASCADE, -- null if new pin proposal
-  proposer_id uuid REFERENCES profiles(id) NOT NULL,
-  community_id uuid REFERENCES communities(id),
+  proposer_id text DEFAULT 'anonymous', -- Use text for now, can be upgraded to UUID later
   action text NOT NULL CHECK (action IN ('create', 'edit', 'delete', 'attach_photo')),
   payload jsonb NOT NULL, -- proposed fields and values
   status text DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected')),
-  reviewer_id uuid REFERENCES profiles(id),
+  reviewer_id text DEFAULT 'admin',
   reviewed_at timestamptz,
   created_at timestamptz DEFAULT now()
 );
@@ -35,7 +28,7 @@ CREATE TABLE IF NOT EXISTS pin_proposals (
 -- Create block grid table for 3m x 3m spacing
 CREATE TABLE IF NOT EXISTS pin_block_cells (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  community_id uuid REFERENCES communities(id),
+  community_id text DEFAULT 'stoneclough', -- Use text for now
   cell_x integer NOT NULL,
   cell_y integer NOT NULL,
   bucket jsonb DEFAULT '{}', -- metadata like reason, owner, expires_at
@@ -57,7 +50,7 @@ CREATE TABLE IF NOT EXISTS project_pins (
 CREATE TABLE IF NOT EXISTS pin_photos (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   pin_id uuid REFERENCES pins(id) ON DELETE CASCADE,
-  uploaded_by uuid REFERENCES profiles(id),
+  uploaded_by text DEFAULT 'anonymous',
   storage_path text NOT NULL, -- Supabase Storage key
   caption text CHECK (char_length(caption) <= 500),
   created_at timestamptz DEFAULT now(),
@@ -69,9 +62,9 @@ CREATE TABLE IF NOT EXISTS issue_flags (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   pin_id uuid REFERENCES pins(id) ON DELETE CASCADE,
   severity smallint DEFAULT 3 CHECK (severity BETWEEN 1 AND 5), -- 1-critical .. 5-low
-  reported_by uuid REFERENCES profiles(id),
+  reported_by text DEFAULT 'anonymous',
   status text DEFAULT 'open' CHECK (status IN ('open', 'in_progress', 'resolved', 'dismissed')),
-  assigned_to uuid REFERENCES profiles(id),
+  assigned_to text,
   created_at timestamptz DEFAULT now(),
   resolved_at timestamptz
 );
