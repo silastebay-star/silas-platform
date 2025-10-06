@@ -2210,6 +2210,232 @@ function FindMentor({ layer, onClose }) {
   );
 }
 
+// Works Layer Quick Actions
+function StartProject({ layer, onClose }) {
+  const [formData, setFormData] = useState({
+    projectName: '',
+    category: 'Infrastructure',
+    description: '',
+    timeline: '3 months',
+    budget: '',
+    volunteersNeeded: '5',
+    skills: '',
+    location: '',
+    goals: ''
+  });
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Start Project</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Project Name</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            placeholder="Name your community project"
+            value={formData.projectName}
+            onChange={(e) => setFormData({...formData, projectName: e.target.value})}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.category}
+              onChange={(e) => setFormData({...formData, category: e.target.value})}
+            >
+              <option>Infrastructure</option>
+              <option>Environment</option>
+              <option>Community Space</option>
+              <option>Education</option>
+              <option>Health & Safety</option>
+              <option>Arts & Culture</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Timeline</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.timeline}
+              onChange={(e) => setFormData({...formData, timeline: e.target.value})}
+            >
+              <option>1 month</option>
+              <option>3 months</option>
+              <option>6 months</option>
+              <option>1 year</option>
+              <option>Ongoing</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Project Description</label>
+          <textarea
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm h-20"
+            placeholder="Describe your project and its impact on the community..."
+            value={formData.description}
+            onChange={(e) => setFormData({...formData, description: e.target.value})}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Budget</label>
+            <input
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              placeholder="£0 - £1000"
+              value={formData.budget}
+              onChange={(e) => setFormData({...formData, budget: e.target.value})}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Volunteers Needed</label>
+            <input
+              type="number"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.volunteersNeeded}
+              onChange={(e) => setFormData({...formData, volunteersNeeded: e.target.value})}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Skills Needed</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            placeholder="e.g., Carpentry, Gardening, Project Management"
+            value={formData.skills}
+            onChange={(e) => setFormData({...formData, skills: e.target.value})}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+            Create Project
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function JoinTeam({ layer, onClose }) {
+  const [projects, setProjects] = useState([
+    { id: 1, name: "Community Garden Expansion", team: 8, needed: 12, skills: ["Gardening", "Construction"], commitment: "Weekends", urgency: "High" },
+    { id: 2, name: "Playground Renovation", team: 5, needed: 10, skills: ["Carpentry", "Painting"], commitment: "Evenings", urgency: "Medium" },
+    { id: 3, name: "Village Hall Repairs", team: 12, needed: 15, skills: ["Electrical", "Plumbing"], commitment: "Flexible", urgency: "Low" }
+  ]);
+  const [selectedProject, setSelectedProject] = useState(null);
+  const [userSkills, setUserSkills] = useState('');
+  const [availability, setAvailability] = useState('');
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Join Team</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="space-y-3">
+        {projects.map(project => (
+          <Card
+            key={project.id}
+            className={`p-3 cursor-pointer transition-all ${
+              selectedProject === project.id ? 'ring-2 ring-blue-500' : 'hover:shadow-md'
+            }`}
+            onClick={() => setSelectedProject(project.id)}
+          >
+            <div className="space-y-2">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{project.name}</h4>
+                  <p className="text-sm text-gray-600">Team: {project.team}/{project.needed} volunteers</p>
+                  <p className="text-xs text-gray-500">Commitment: {project.commitment}</p>
+                </div>
+                <div className="text-right">
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    project.urgency === 'High' ? 'bg-red-100 text-red-800' :
+                    project.urgency === 'Medium' ? 'bg-yellow-100 text-yellow-800' :
+                    'bg-green-100 text-green-800'
+                  }`}>
+                    {project.urgency} Priority
+                  </span>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {project.skills.map((skill, index) => (
+                  <span key={index} className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
+                    {skill}
+                  </span>
+                ))}
+              </div>
+              <div className="w-full bg-gray-200 rounded-full h-2">
+                <div
+                  className="h-2 rounded-full transition-all"
+                  style={{
+                    width: `${(project.team / project.needed) * 100}%`,
+                    backgroundColor: LAYER_CONFIG[layer]?.color
+                  }}
+                />
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {selectedProject && (
+        <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+          <h4 className="font-medium">Join Application</h4>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Your Skills</label>
+            <input
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              placeholder="List your relevant skills..."
+              value={userSkills}
+              onChange={(e) => setUserSkills(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Availability</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={availability}
+              onChange={(e) => setAvailability(e.target.value)}
+            >
+              <option value="">Select availability</option>
+              <option>Weekdays</option>
+              <option>Weekends</option>
+              <option>Evenings</option>
+              <option>Flexible</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <Button variant="outline" onClick={onClose}>Cancel</Button>
+        <Button
+          disabled={!selectedProject}
+          style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}
+        >
+          Join Team
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 // Quick Action Renderer Function
 function renderQuickAction(action, layer, onClose) {
   const actionComponents = {
@@ -2224,6 +2450,12 @@ function renderQuickAction(action, layer, onClose) {
       'Find Mentor': () => <FindMentor layer={layer} onClose={onClose} />,
       'Offer Services': () => renderQuickAction('Offer Services', layer, onClose),
       'Request Support': () => renderQuickAction('Request Support', layer, onClose)
+    },
+    'Works': {
+      'Start Project': () => <StartProject layer={layer} onClose={onClose} />,
+      'Join Team': () => <JoinTeam layer={layer} onClose={onClose} />,
+      'Donate Resources': () => renderQuickAction('Donate Resources', layer, onClose),
+      'Track Progress': () => renderQuickAction('Track Progress', layer, onClose)
     }
   };
 
