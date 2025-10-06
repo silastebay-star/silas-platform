@@ -2436,6 +2436,823 @@ function JoinTeam({ layer, onClose }) {
   );
 }
 
+// Circle Layer Quick Actions
+function CreateProposal({ layer, onClose }) {
+  const [formData, setFormData] = useState({
+    title: '',
+    category: 'Infrastructure',
+    description: '',
+    rationale: '',
+    impact: '',
+    budget: '',
+    timeline: '30 days',
+    votingDuration: '7 days',
+    attachments: []
+  });
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Create Proposal</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Proposal Title</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            placeholder="Clear, concise title for your proposal"
+            value={formData.title}
+            onChange={(e) => setFormData({...formData, title: e.target.value})}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.category}
+              onChange={(e) => setFormData({...formData, category: e.target.value})}
+            >
+              <option>Infrastructure</option>
+              <option>Budget</option>
+              <option>Community</option>
+              <option>Environment</option>
+              <option>Policy</option>
+              <option>Services</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Voting Duration</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.votingDuration}
+              onChange={(e) => setFormData({...formData, votingDuration: e.target.value})}
+            >
+              <option>3 days</option>
+              <option>7 days</option>
+              <option>14 days</option>
+              <option>30 days</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <textarea
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm h-20"
+            placeholder="Detailed description of your proposal..."
+            value={formData.description}
+            onChange={(e) => setFormData({...formData, description: e.target.value})}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Rationale</label>
+          <textarea
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm h-16"
+            placeholder="Why is this proposal necessary?"
+            value={formData.rationale}
+            onChange={(e) => setFormData({...formData, rationale: e.target.value})}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Estimated Budget</label>
+            <input
+              type="text"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              placeholder="£0 - £10,000"
+              value={formData.budget}
+              onChange={(e) => setFormData({...formData, budget: e.target.value})}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Implementation Timeline</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.timeline}
+              onChange={(e) => setFormData({...formData, timeline: e.target.value})}
+            >
+              <option>30 days</option>
+              <option>3 months</option>
+              <option>6 months</option>
+              <option>1 year</option>
+              <option>Ongoing</option>
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Button variant="outline" onClick={onClose}>Save Draft</Button>
+          <Button style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+            Submit Proposal
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CastVote({ layer, onClose }) {
+  const [activeProposals, setActiveProposals] = useState([
+    { id: 1, title: "New Community Center Hours", description: "Extend opening hours to 9 PM weekdays", votes: { yes: 45, no: 12 }, deadline: "3 days", hasVoted: false },
+    { id: 2, title: "Traffic Calming Measures", description: "Install speed bumps on Main Street", votes: { yes: 38, no: 22 }, deadline: "1 day", hasVoted: false },
+    { id: 3, title: "Community Garden Expansion", description: "Add 20 new plots to existing garden", votes: { yes: 52, no: 8 }, deadline: "5 days", hasVoted: true }
+  ]);
+
+  const handleVote = (proposalId, vote) => {
+    setActiveProposals(prev => prev.map(proposal =>
+      proposal.id === proposalId
+        ? {
+            ...proposal,
+            hasVoted: true,
+            votes: {
+              yes: proposal.votes.yes + (vote === 'yes' ? 1 : 0),
+              no: proposal.votes.no + (vote === 'no' ? 1 : 0)
+            }
+          }
+        : proposal
+    ));
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Cast Vote</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="space-y-3">
+        {activeProposals.map(proposal => (
+          <Card key={proposal.id} className="p-3">
+            <div className="space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{proposal.title}</h4>
+                  <p className="text-sm text-gray-600">{proposal.description}</p>
+                  <p className="text-xs text-gray-500 mt-1">Deadline: {proposal.deadline} remaining</p>
+                </div>
+                {proposal.hasVoted && (
+                  <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full">
+                    Voted
+                  </span>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Yes: {proposal.votes.yes}</span>
+                  <span>No: {proposal.votes.no}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="h-2 rounded-full transition-all bg-green-500"
+                    style={{
+                      width: `${(proposal.votes.yes / (proposal.votes.yes + proposal.votes.no)) * 100}%`
+                    }}
+                  />
+                </div>
+              </div>
+
+              {!proposal.hasVoted ? (
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    size="sm"
+                    className="text-xs bg-green-600 hover:bg-green-700"
+                    onClick={() => handleVote(proposal.id, 'yes')}
+                  >
+                    Vote Yes
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs border-red-300 text-red-600 hover:bg-red-50"
+                    onClick={() => handleVote(proposal.id, 'no')}
+                  >
+                    Vote No
+                  </Button>
+                </div>
+              ) : (
+                <div className="text-center text-sm text-gray-500 py-2">
+                  Thank you for voting!
+                </div>
+              )}
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function JoinDiscussion({ layer, onClose }) {
+  const [discussions, setDiscussions] = useState([
+    { id: 1, title: "Community Garden Location", author: "Sarah M.", replies: 12, lastActivity: "2 hours ago", category: "Environment", isJoined: false },
+    { id: 2, title: "Traffic Safety Concerns", author: "John D.", replies: 8, lastActivity: "5 hours ago", category: "Infrastructure", isJoined: true },
+    { id: 3, title: "Youth Programs Funding", author: "Emma L.", replies: 15, lastActivity: "1 day ago", category: "Community", isJoined: false }
+  ]);
+  const [newMessage, setNewMessage] = useState('');
+  const [selectedDiscussion, setSelectedDiscussion] = useState(null);
+
+  const joinDiscussion = (discussionId) => {
+    setDiscussions(prev => prev.map(discussion =>
+      discussion.id === discussionId
+        ? { ...discussion, isJoined: true, replies: discussion.replies + 1 }
+        : discussion
+    ));
+    setSelectedDiscussion(null);
+    setNewMessage('');
+  };
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Join Discussion</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="space-y-3">
+        {discussions.map(discussion => (
+          <Card key={discussion.id} className="p-3 hover:shadow-md transition-shadow">
+            <div className="space-y-2">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{discussion.title}</h4>
+                  <p className="text-sm text-gray-600">by {discussion.author}</p>
+                  <p className="text-xs text-gray-500">{discussion.replies} replies • {discussion.lastActivity}</p>
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <span className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
+                    {discussion.category}
+                  </span>
+                  {discussion.isJoined && (
+                    <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full">
+                      Joined
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {!discussion.isJoined ? (
+                <div className="space-y-2">
+                  <Button
+                    size="sm"
+                    className="w-full text-xs"
+                    style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}
+                    onClick={() => setSelectedDiscussion(discussion.id)}
+                  >
+                    Join Discussion
+                  </Button>
+
+                  {selectedDiscussion === discussion.id && (
+                    <div className="space-y-2 p-2 bg-gray-50 rounded">
+                      <textarea
+                        className="w-full px-2 py-1 border border-gray-300 rounded text-xs h-16"
+                        placeholder="Add your thoughts to the discussion..."
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                      />
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="text-xs flex-1"
+                          onClick={() => setSelectedDiscussion(null)}
+                        >
+                          Cancel
+                        </Button>
+                        <Button
+                          size="sm"
+                          className="text-xs flex-1"
+                          style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}
+                          onClick={() => joinDiscussion(discussion.id)}
+                          disabled={!newMessage.trim()}
+                        >
+                          Post & Join
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full text-xs"
+                >
+                  View Discussion
+                </Button>
+              )}
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ViewResults({ layer, onClose }) {
+  const [results, setResults] = useState([
+    {
+      id: 1,
+      title: "Playground Equipment Upgrade",
+      date: "Dec 2024",
+      result: "Approved",
+      votes: { yes: 52, no: 8 },
+      turnout: "68%",
+      status: "In Progress",
+      implementation: 45
+    },
+    {
+      id: 2,
+      title: "Street Lighting Improvement",
+      date: "Nov 2024",
+      result: "Approved",
+      votes: { yes: 45, no: 15 },
+      turnout: "72%",
+      status: "Completed",
+      implementation: 100
+    },
+    {
+      id: 3,
+      title: "Dog Park Proposal",
+      date: "Oct 2024",
+      result: "Rejected",
+      votes: { yes: 23, no: 37 },
+      turnout: "65%",
+      status: "Closed",
+      implementation: 0
+    }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>View Results</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="flex gap-2 mb-4">
+        <Button variant="outline" size="sm" className="text-xs">All Results</Button>
+        <Button variant="outline" size="sm" className="text-xs">Approved</Button>
+        <Button variant="outline" size="sm" className="text-xs">In Progress</Button>
+      </div>
+
+      <div className="space-y-3">
+        {results.map(result => (
+          <Card key={result.id} className="p-3">
+            <div className="space-y-3">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{result.title}</h4>
+                  <p className="text-sm text-gray-600">{result.date} • Turnout: {result.turnout}</p>
+                </div>
+                <div className="text-right">
+                  <span className={`text-xs px-2 py-1 rounded-full ${
+                    result.result === 'Approved' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                  }`}>
+                    {result.result}
+                  </span>
+                  <div className="text-xs text-gray-500 mt-1">{result.status}</div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>Yes: {result.votes.yes}</span>
+                  <span>No: {result.votes.no}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className={`h-2 rounded-full transition-all ${
+                      result.result === 'Approved' ? 'bg-green-500' : 'bg-red-500'
+                    }`}
+                    style={{
+                      width: `${(result.votes.yes / (result.votes.yes + result.votes.no)) * 100}%`
+                    }}
+                  />
+                </div>
+              </div>
+
+              {result.result === 'Approved' && result.status !== 'Completed' && (
+                <div className="space-y-1">
+                  <div className="flex justify-between text-sm">
+                    <span>Implementation Progress</span>
+                    <span>{result.implementation}%</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="h-2 rounded-full transition-all"
+                      style={{
+                        width: `${result.implementation}%`,
+                        backgroundColor: LAYER_CONFIG[layer]?.color
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// Mind Layer Quick Actions
+function StartCourse({ layer, onClose }) {
+  const [courses, setCourses] = useState([
+    { id: 1, title: "Sustainable Living Basics", duration: "4 weeks", difficulty: "Beginner", modules: 8, enrolled: 23, rating: 4.8 },
+    { id: 2, title: "Local History & Heritage", duration: "6 weeks", difficulty: "Intermediate", modules: 12, enrolled: 15, rating: 4.9 },
+    { id: 3, title: "Community Leadership", duration: "8 weeks", difficulty: "Advanced", modules: 10, enrolled: 8, rating: 4.7 },
+    { id: 4, title: "Digital Skills for Seniors", duration: "3 weeks", difficulty: "Beginner", modules: 6, enrolled: 31, rating: 4.6 }
+  ]);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Start Course</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="space-y-3">
+        {courses.map(course => (
+          <Card
+            key={course.id}
+            className={`p-3 cursor-pointer transition-all ${
+              selectedCourse === course.id ? 'ring-2 ring-blue-500' : 'hover:shadow-md'
+            }`}
+            onClick={() => setSelectedCourse(course.id)}
+          >
+            <div className="space-y-2">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{course.title}</h4>
+                  <p className="text-sm text-gray-600">{course.duration} • {course.modules} modules</p>
+                  <p className="text-xs text-gray-500">{course.enrolled} enrolled • ⭐ {course.rating}</p>
+                </div>
+                <span className={`text-xs px-2 py-1 rounded-full ${
+                  course.difficulty === 'Beginner' ? 'bg-green-100 text-green-800' :
+                  course.difficulty === 'Intermediate' ? 'bg-yellow-100 text-yellow-800' :
+                  'bg-red-100 text-red-800'
+                }`}>
+                  {course.difficulty}
+                </span>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {selectedCourse && (
+        <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+          <h4 className="font-medium">Enrollment Details</h4>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Learning Goals</label>
+            <textarea
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm h-16"
+              placeholder="What do you hope to achieve from this course?"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Available Time</label>
+            <select className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm">
+              <option>1-2 hours per week</option>
+              <option>3-4 hours per week</option>
+              <option>5+ hours per week</option>
+            </select>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <Button variant="outline" onClick={onClose}>Cancel</Button>
+        <Button
+          disabled={!selectedCourse}
+          style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}
+        >
+          Enroll in Course
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function ShareKnowledge({ layer, onClose }) {
+  const [formData, setFormData] = useState({
+    title: '',
+    category: 'Skills & Crafts',
+    type: 'Article',
+    content: '',
+    tags: '',
+    difficulty: 'Beginner',
+    timeToRead: '5 minutes'
+  });
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Share Knowledge</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            placeholder="What knowledge are you sharing?"
+            value={formData.title}
+            onChange={(e) => setFormData({...formData, title: e.target.value})}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.category}
+              onChange={(e) => setFormData({...formData, category: e.target.value})}
+            >
+              <option>Skills & Crafts</option>
+              <option>Local History</option>
+              <option>Gardening & Nature</option>
+              <option>Technology</option>
+              <option>Health & Wellness</option>
+              <option>Business & Finance</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Content Type</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.type}
+              onChange={(e) => setFormData({...formData, type: e.target.value})}
+            >
+              <option>Article</option>
+              <option>Tutorial</option>
+              <option>Guide</option>
+              <option>Tips & Tricks</option>
+              <option>Resource List</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Content</label>
+          <textarea
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm h-32"
+            placeholder="Share your knowledge, experience, or insights..."
+            value={formData.content}
+            onChange={(e) => setFormData({...formData, content: e.target.value})}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Difficulty Level</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.difficulty}
+              onChange={(e) => setFormData({...formData, difficulty: e.target.value})}
+            >
+              <option>Beginner</option>
+              <option>Intermediate</option>
+              <option>Advanced</option>
+              <option>Expert</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Reading Time</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.timeToRead}
+              onChange={(e) => setFormData({...formData, timeToRead: e.target.value})}
+            >
+              <option>2 minutes</option>
+              <option>5 minutes</option>
+              <option>10 minutes</option>
+              <option>15+ minutes</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Tags</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            placeholder="e.g., woodworking, beginner, tools"
+            value={formData.tags}
+            onChange={(e) => setFormData({...formData, tags: e.target.value})}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Button variant="outline" onClick={onClose}>Save Draft</Button>
+          <Button style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+            Publish Knowledge
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AskSILAS({ layer, onClose }) {
+  const [messages, setMessages] = useState([
+    { id: 1, type: 'ai', content: "Hello! I'm SILAS, your community AI assistant. What would you like to know about Stoneclough?" },
+  ]);
+  const [newMessage, setNewMessage] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+
+  const quickQuestions = [
+    "What events are happening this week?",
+    "How can I get involved in community projects?",
+    "What local businesses are recommended?",
+    "How do I submit a community proposal?"
+  ];
+
+  const sendMessage = async () => {
+    if (!newMessage.trim()) return;
+
+    const userMessage = { id: Date.now(), type: 'user', content: newMessage };
+    setMessages(prev => [...prev, userMessage]);
+    setNewMessage('');
+    setIsTyping(true);
+
+    // Simulate AI response
+    setTimeout(() => {
+      const aiResponse = {
+        id: Date.now() + 1,
+        type: 'ai',
+        content: `I understand you're asking about "${newMessage}". Based on our community data, I can help you with that. Would you like me to provide specific details or connect you with relevant community members?`
+      };
+      setMessages(prev => [...prev, aiResponse]);
+      setIsTyping(false);
+    }, 1500);
+  };
+
+  const askQuickQuestion = (question) => {
+    setNewMessage(question);
+  };
+
+  return (
+    <div className="p-4 space-y-4 h-full flex flex-col">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Ask SILAS</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="flex-1 space-y-3 overflow-y-auto">
+        {messages.map(message => (
+          <div key={message.id} className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}>
+            <div className={`max-w-[80%] p-3 rounded-lg text-sm ${
+              message.type === 'user'
+                ? 'bg-blue-500 text-white'
+                : 'bg-gray-100 text-gray-800'
+            }`}>
+              {message.content}
+            </div>
+          </div>
+        ))}
+        {isTyping && (
+          <div className="flex justify-start">
+            <div className="bg-gray-100 text-gray-800 p-3 rounded-lg text-sm">
+              SILAS is typing...
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-2">
+          <p className="text-xs text-gray-500">Quick questions:</p>
+          {quickQuestions.map((question, index) => (
+            <Button
+              key={index}
+              variant="outline"
+              size="sm"
+              className="text-xs justify-start"
+              onClick={() => askQuickQuestion(question)}
+            >
+              {question}
+            </Button>
+          ))}
+        </div>
+
+        <div className="flex gap-2">
+          <input
+            type="text"
+            className="flex-1 px-3 py-2 border border-gray-300 rounded-md text-sm"
+            placeholder="Ask SILAS anything about the community..."
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+          />
+          <Button
+            size="sm"
+            style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}
+            onClick={sendMessage}
+            disabled={!newMessage.trim() || isTyping}
+          >
+            Send
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FindTutor({ layer, onClose }) {
+  const [searchData, setSearchData] = useState({
+    subject: 'All Subjects',
+    level: 'Any Level',
+    availability: 'Any Time',
+    format: 'Any Format'
+  });
+
+  const [tutors, setTutors] = useState([
+    { id: 1, name: "Dr. Sarah Wilson", subject: "Mathematics", level: "GCSE/A-Level", rating: 4.9, price: "£25/hour", availability: "Weekends", format: "In-person" },
+    { id: 2, name: "James Mitchell", subject: "Guitar", level: "Beginner to Advanced", rating: 4.8, price: "£20/hour", availability: "Evenings", format: "Both" },
+    { id: 3, name: "Emma Thompson", subject: "French", level: "Conversational", rating: 4.7, price: "£18/hour", availability: "Flexible", format: "Online" },
+    { id: 4, name: "Robert Chen", subject: "Computer Programming", level: "Beginner", rating: 4.9, price: "£30/hour", availability: "Weekdays", format: "Both" }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Find Tutor</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Subject</label>
+          <select
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            value={searchData.subject}
+            onChange={(e) => setSearchData({...searchData, subject: e.target.value})}
+          >
+            <option>All Subjects</option>
+            <option>Mathematics</option>
+            <option>Languages</option>
+            <option>Music</option>
+            <option>Technology</option>
+            <option>Arts & Crafts</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Format</label>
+          <select
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            value={searchData.format}
+            onChange={(e) => setSearchData({...searchData, format: e.target.value})}
+          >
+            <option>Any Format</option>
+            <option>In-person</option>
+            <option>Online</option>
+            <option>Both</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {tutors.map(tutor => (
+          <Card key={tutor.id} className="p-3 hover:shadow-md transition-shadow">
+            <div className="space-y-2">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{tutor.name}</h4>
+                  <p className="text-sm text-gray-600">{tutor.subject} • {tutor.level}</p>
+                  <p className="text-xs text-gray-500">{tutor.availability} • {tutor.format}</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm font-medium" style={{ color: LAYER_CONFIG[layer]?.color }}>
+                    {tutor.price}
+                  </div>
+                  <div className="text-xs text-gray-500">⭐ {tutor.rating}</div>
+                </div>
+              </div>
+              <Button size="sm" className="w-full text-xs" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+                Contact Tutor
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Quick Action Renderer Function
 function renderQuickAction(action, layer, onClose) {
   const actionComponents = {
@@ -2456,6 +3273,18 @@ function renderQuickAction(action, layer, onClose) {
       'Join Team': () => <JoinTeam layer={layer} onClose={onClose} />,
       'Donate Resources': () => renderQuickAction('Donate Resources', layer, onClose),
       'Track Progress': () => renderQuickAction('Track Progress', layer, onClose)
+    },
+    'Circle': {
+      'Create Proposal': () => <CreateProposal layer={layer} onClose={onClose} />,
+      'Cast Vote': () => <CastVote layer={layer} onClose={onClose} />,
+      'Join Discussion': () => <JoinDiscussion layer={layer} onClose={onClose} />,
+      'View Results': () => <ViewResults layer={layer} onClose={onClose} />
+    },
+    'Mind': {
+      'Start Course': () => <StartCourse layer={layer} onClose={onClose} />,
+      'Share Knowledge': () => <ShareKnowledge layer={layer} onClose={onClose} />,
+      'Ask SILAS': () => <AskSILAS layer={layer} onClose={onClose} />,
+      'Find Tutor': () => <FindTutor layer={layer} onClose={onClose} />
     }
   };
 
