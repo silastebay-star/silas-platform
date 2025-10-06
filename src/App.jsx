@@ -20,7 +20,8 @@ if (typeof window !== 'undefined') {
 }
 
 const MAPBOX_TOKEN = "pk.eyJ1Ijoic2lsYXN0ZWJheSIsImEiOiJjbWdhemRoanIwdm5nMm5yMGtueXBhbmcxIn0.vJn_5sGNt1X4QM4Je7wPFg";
-const MAPBOX_STYLE = "mapbox://styles/silastebay/cmgaznfkx000f01qu43308dzx";
+const MAPBOX_STYLE = "mapbox://styles/mapbox/streets-v12"; // Using standard style for reliability
+const CUSTOM_STYLE = "mapbox://styles/silastebay/cmgaznfkx000f01qu43308dzx"; // Your custom style
 
 const LAYER_CONFIG = {
   Economy: { 
@@ -101,10 +102,20 @@ function MapboxCentral({ geojsonUrl, csvUrl, kmlUrl, onSelect, activeLayer }) {
         style: MAPBOX_STYLE,
         center: [-2.3769, 53.5526],
         zoom: 14,
-        attributionControl: false
+        attributionControl: false,
+        failIfMajorPerformanceCaveat: false
       });
 
       map.addControl(new mapboxgl.NavigationControl(), 'top-right');
+      
+      // Log style loading for debugging
+      map.on('style.load', () => {
+        console.log('Mapbox style loaded successfully');
+      });
+      
+      map.on('styledata', () => {
+        console.log('Mapbox style data loaded');
+      });
 
       const loadAllData = async () => {
         try {
