@@ -1997,6 +1997,219 @@ function renderTool(tool, layer, onClose) {
   );
 }
 
+// Economy Layer Quick Actions
+function ListBusiness({ layer, onClose }) {
+  const [formData, setFormData] = useState({
+    businessName: '',
+    category: 'Food & Dining',
+    description: '',
+    address: '',
+    phone: '',
+    email: '',
+    website: '',
+    hours: '',
+    services: ''
+  });
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>List Business</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Business Name</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            placeholder="Your business name"
+            value={formData.businessName}
+            onChange={(e) => setFormData({...formData, businessName: e.target.value})}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.category}
+              onChange={(e) => setFormData({...formData, category: e.target.value})}
+            >
+              <option>Food & Dining</option>
+              <option>Retail</option>
+              <option>Services</option>
+              <option>Agriculture</option>
+              <option>Crafts & Arts</option>
+              <option>Professional Services</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+            <input
+              type="tel"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              placeholder="Business phone"
+              value={formData.phone}
+              onChange={(e) => setFormData({...formData, phone: e.target.value})}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <textarea
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm h-20"
+            placeholder="Brief description of your business..."
+            value={formData.description}
+            onChange={(e) => setFormData({...formData, description: e.target.value})}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Address</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            placeholder="Business address"
+            value={formData.address}
+            onChange={(e) => setFormData({...formData, address: e.target.value})}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input
+              type="email"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              placeholder="contact@business.com"
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Website</label>
+            <input
+              type="url"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              placeholder="www.business.com"
+              value={formData.website}
+              onChange={(e) => setFormData({...formData, website: e.target.value})}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Operating Hours</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            placeholder="e.g., Mon-Fri 9AM-5PM"
+            value={formData.hours}
+            onChange={(e) => setFormData({...formData, hours: e.target.value})}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+            List Business
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FindMentor({ layer, onClose }) {
+  const [searchData, setSearchData] = useState({
+    industry: 'All Industries',
+    experience: 'Any Level',
+    availability: 'Any Time',
+    location: 'Local Only'
+  });
+
+  const [mentors, setMentors] = useState([
+    { id: 1, name: "Sarah Johnson", industry: "Retail", experience: "15 years", rating: 4.9, availability: "Weekends", specialties: ["Business Planning", "Marketing"] },
+    { id: 2, name: "Mike Roberts", industry: "Agriculture", experience: "20 years", rating: 4.8, availability: "Evenings", specialties: ["Sustainable Farming", "Supply Chain"] },
+    { id: 3, name: "Emma Davis", industry: "Professional Services", experience: "12 years", rating: 4.7, availability: "Flexible", specialties: ["Finance", "Legal Compliance"] }
+  ]);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Find Mentor</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Industry</label>
+          <select
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            value={searchData.industry}
+            onChange={(e) => setSearchData({...searchData, industry: e.target.value})}
+          >
+            <option>All Industries</option>
+            <option>Retail</option>
+            <option>Agriculture</option>
+            <option>Professional Services</option>
+            <option>Food & Dining</option>
+            <option>Crafts & Arts</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Experience Level</label>
+          <select
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            value={searchData.experience}
+            onChange={(e) => setSearchData({...searchData, experience: e.target.value})}
+          >
+            <option>Any Level</option>
+            <option>5+ years</option>
+            <option>10+ years</option>
+            <option>15+ years</option>
+          </select>
+        </div>
+      </div>
+
+      <div className="space-y-3">
+        {mentors.map(mentor => (
+          <Card key={mentor.id} className="p-3 hover:shadow-md transition-shadow">
+            <div className="space-y-2">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{mentor.name}</h4>
+                  <p className="text-sm text-gray-600">{mentor.industry} • {mentor.experience} experience</p>
+                  <p className="text-xs text-gray-500">Available: {mentor.availability}</p>
+                </div>
+                <div className="text-right">
+                  <div className="text-sm" style={{ color: LAYER_CONFIG[layer]?.color }}>
+                    ⭐ {mentor.rating}
+                  </div>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {mentor.specialties.map((specialty, index) => (
+                  <span key={index} className="text-xs px-2 py-1 bg-gray-100 text-gray-600 rounded-full">
+                    {specialty}
+                  </span>
+                ))}
+              </div>
+              <Button size="sm" className="w-full text-xs" style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+                Request Mentorship
+              </Button>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // Quick Action Renderer Function
 function renderQuickAction(action, layer, onClose) {
   const actionComponents = {
@@ -2005,6 +2218,12 @@ function renderQuickAction(action, layer, onClose) {
       'Create Event': () => <CreateEvent layer={layer} onClose={onClose} />,
       'Join Ministry': () => <JoinMinistry layer={layer} onClose={onClose} />,
       'Share Testimony': () => <ShareTestimony layer={layer} onClose={onClose} />
+    },
+    'Economy': {
+      'List Business': () => <ListBusiness layer={layer} onClose={onClose} />,
+      'Find Mentor': () => <FindMentor layer={layer} onClose={onClose} />,
+      'Offer Services': () => renderQuickAction('Offer Services', layer, onClose),
+      'Request Support': () => renderQuickAction('Request Support', layer, onClose)
     }
   };
 
