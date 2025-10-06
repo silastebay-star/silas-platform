@@ -12,6 +12,8 @@ import { CopilotModal } from './components/CopilotModal.jsx';
 import BulkPinModal from './components/BulkPinModal.jsx';
 import QuickPinModal from './components/QuickPinModal.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
+import SocialPanel from './components/SocialPanel.jsx';
+import NotificationSystem, { NotificationBell } from './components/NotificationSystem.jsx';
 import { Progress } from '@/components/ui/progress.jsx';
 import silasLogo from './assets/silas-logo.png';
 import { censusData, getDemographicComparison, getCommunityInsights, formatPercentage, formatPopulation } from './utils/censusData.js';
@@ -5599,6 +5601,28 @@ export default function SilasPlatform() {
   const [bulkPinCenter, setBulkPinCenter] = useState(null);
   const [showQuickPin, setShowQuickPin] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [showSocialPanel, setShowSocialPanel] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      type: 'like',
+      title: 'New reaction on your pin',
+      message: 'Someone liked your Community Garden pin',
+      pinName: 'Community Garden Project',
+      created_at: new Date(Date.now() - 300000).toISOString(), // 5 minutes ago
+      read: false
+    },
+    {
+      id: 2,
+      type: 'comment',
+      title: 'New comment',
+      message: 'Great idea! I would love to help with this project.',
+      pinName: 'Local Business Directory',
+      created_at: new Date(Date.now() - 900000).toISOString(), // 15 minutes ago
+      read: false
+    }
+  ]);
   const [mapData, setMapData] = useState({ type: "FeatureCollection", features: [] });
   const [socialFeedPins, setSocialFeedPins] = useState([]);
   const [showMetrics, setShowMetrics] = useState(null);
@@ -5709,14 +5733,39 @@ export default function SilasPlatform() {
       await supabaseHelpers.logActivity(actionType, { pin_id: pinId, layer: layer, action: actionType });
 
       // Add feedback based on action type
-      if (['amen', 'endorse_business', 'join_project', 'vote_on_proposal'].includes(actionType)) {
+      if (['amen', 'endorse_business', 'join_project', 'vote_on_proposal', 'like', 'love', 'support'].includes(actionType)) {
         await supabaseHelpers.addFeedback(pinId, actionType, 'anonymous');
+      }
+
+      // Create notification for pin owner (simulated)
+      const actionMessages = {
+        like: 'Someone liked your pin',
+        love: 'Someone loved your pin',
+        amen: 'Someone said Amen to your faith pin',
+        endorse_business: 'Someone endorsed your business',
+        join_project: 'Someone wants to join your project',
+        vote_on_proposal: 'Someone voted on your proposal',
+        share: 'Someone shared your pin'
+      };
+
+      if (actionMessages[actionType]) {
+        const newNotification = {
+          id: Date.now(),
+          type: actionType,
+          title: actionMessages[actionType],
+          message: `Your pin received a new ${actionType} interaction`,
+          pinName: socialFeedPins.find(p => p.id === pinId)?.name || 'Unknown Pin',
+          created_at: new Date().toISOString(),
+          read: false
+        };
+
+        setNotifications(prev => [newNotification, ...prev]);
       }
 
       // Reload data to reflect changes
       loadAllData();
 
-      // Show success feedback (you could replace with toast notification)
+      // Show success feedback
       console.log(`Action '${actionType}' completed for pin ${pinId}`);
     } catch (error) {
       console.error('Error performing action:', error);
@@ -5848,13 +5897,20 @@ export default function SilasPlatform() {
         >
           Admin
         </button>
-        <div className="flex items-center gap-2 mr-6 bg-gray-100 rounded-full p-1">
-          <button onClick={() => setViewMode("map")} className={`px-4 py-1 rounded-full text-sm font-medium transition-all ${viewMode === "map" ? "bg-white shadow-md" : "bg-transparent text-gray-600"}`}>
-            Map
-          </button>
-          <button onClick={() => setViewMode("social")} className={`px-4 py-1 rounded-full text-sm font-medium transition-all ${viewMode === "social" ? "bg-white shadow-md" : "bg-transparent text-gray-600"}`}>
+        <div className="flex items-center space-x-2 mr-6">
+          <NotificationBell
+            notificationCount={notifications.filter(n => !n.read).length}
+            onClick={() => setShowNotifications(!showNotifications)}
+          />
+          <Button
+            variant={showSocialPanel ? "default" : "outline"}
+            size="sm"
+            onClick={() => setShowSocialPanel(!showSocialPanel)}
+            className="text-xs"
+          >
+            <MessageCircle size={14} className="mr-1" />
             Social
-          </button>
+          </Button>
         </div>
         <nav className="flex gap-2 text-sm">
           {Object.keys(LAYER_CONFIG).map((layer) => (
@@ -5890,13 +5946,14 @@ export default function SilasPlatform() {
         </nav>
       </header>
 
-      {viewMode === "social" && (
-        <SocialFeedModal
-          pins={socialFeedPins}
-          activeLayer={activeLayer}
-          onItemClick={handleFeedItemClick}
-        />
-      )}
+      {/* Enhanced Social Panel */}
+      <SocialPanel
+        pins={socialFeedPins}
+        activeLayer={activeLayer}
+        onItemClick={handleFeedItemClick}
+        onClose={() => setShowSocialPanel(false)}
+        isVisible={showSocialPanel}
+      />
 
       {selectedFeature && viewMode === "map" && (
         <Card className="absolute top-24 right-6 z-30 w-[420px] bg-white/98 backdrop-blur-md shadow-2xl border-2 animate-in fade-in slide-in-from-right-4 duration-300" style={{ borderColor: LAYER_CONFIG[selectedFeature.properties?.layer || "Economy"]?.color }}>
@@ -5912,7 +5969,43 @@ export default function SilasPlatform() {
           <CardContent>
             <div className="text-sm text-gray-700 mb-4">{selectedFeature.properties?.description || "No description available."}</div>
             
-            <div className="space-y-2 mb-4">
+            {/* Enhanced Social Interactions */}
+            <div className="space-y-3 mb-4">
+              {/* Universal Social Actions */}
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center justify-center gap-1 text-xs"
+                  onClick={() => handlePinAction(selectedFeature.properties.id, 'like', selectedFeature.properties?.layer)}
+                >
+                  <ThumbsUp size={12} />
+                  <span>{selectedFeature.properties?.feedback?.filter(f => f.type === 'like')?.length || 0}</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center justify-center gap-1 text-xs"
+                  onClick={() => {
+                    setShowSocialPanel(true);
+                    handleFeedItemClick(selectedFeature.properties);
+                  }}
+                >
+                  <MessageCircle size={12} />
+                  <span>{selectedFeature.properties?.comments || 0}</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex items-center justify-center gap-1 text-xs"
+                  onClick={() => handlePinAction(selectedFeature.properties.id, 'share', selectedFeature.properties?.layer)}
+                >
+                  <Users size={12} />
+                  Share
+                </Button>
+              </div>
+
+              {/* Layer-specific Actions */}
               {selectedFeature.properties?.layer === "Faith" && (
                 <>
                   <Button className="w-full flex items-center justify-center gap-2" style={{ backgroundColor: LAYER_CONFIG.Faith.color }} onClick={() => handlePinAction(selectedFeature.properties.id, 'amen', 'Faith')}>
@@ -6081,6 +6174,13 @@ export default function SilasPlatform() {
       <AdminPanel
         isOpen={showAdminPanel}
         onClose={() => setShowAdminPanel(false)}
+      />
+
+      {/* Notification System */}
+      <NotificationSystem
+        isVisible={showNotifications}
+        onClose={() => setShowNotifications(false)}
+        notifications={notifications}
       />
 
       {boundsWarning && (

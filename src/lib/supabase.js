@@ -81,9 +81,138 @@ export const supabaseHelpers = {
         user_id: userId
       }])
       .select()
-    
+
     if (error) throw error
     return data[0]
+  },
+
+  // Enhanced social features
+  async getCommentsByPin(pinId) {
+    const { data, error } = await supabase
+      .from(TABLES.COMMENTS)
+      .select('*')
+      .eq('pin_id', pinId)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+    return data;
+  },
+
+  async addReaction(pinId, reactionType, userId = 'anonymous') {
+    // Check if user already reacted
+    const { data: existing } = await supabase
+      .from(TABLES.FEEDBACK)
+      .select('*')
+      .eq('pin_id', pinId)
+      .eq('user_id', userId)
+      .eq('type', reactionType)
+      .single();
+
+    if (existing) {
+      // Remove existing reaction (toggle)
+      const { error } = await supabase
+        .from(TABLES.FEEDBACK)
+        .delete()
+        .eq('id', existing.id);
+
+      if (error) throw error;
+      return { action: 'removed', reaction: reactionType };
+    } else {
+      // Add new reaction
+      const { data, error } = await supabase
+        .from(TABLES.FEEDBACK)
+        .insert([{
+          pin_id: pinId,
+          type: reactionType,
+          user_id: userId
+        }])
+        .select();
+
+      if (error) throw error;
+      return { action: 'added', reaction: reactionType, data: data[0] };
+    }
+  },
+
+  async getReactionCounts(pinId) {
+    const { data, error } = await supabase
+      .from(TABLES.FEEDBACK)
+      .select('type')
+      .eq('pin_id', pinId);
+
+    if (error) throw error;
+
+    const counts = {};
+    data.forEach(feedback => {
+      counts[feedback.type] = (counts[feedback.type] || 0) + 1;
+    });
+
+    return counts;
+  },
+
+  async getSocialFeedData(limit = 20, offset = 0) {
+    const { data, error } = await supabase
+      .from(TABLES.PINS)
+      .select(`
+        *,
+        feedback:feedback(count),
+        comments:comments(count)
+      `)
+      .order('updated_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (error) throw error;
+    return data;
+  },
+
+  async sharePin(pinId, userId = 'anonymous', platform = 'internal') {
+    const { data, error } = await supabase
+      .from(TABLES.ACTIVITIES)
+      .insert([{
+        type: 'pin_shared',
+        data: { pin_id: pinId, platform },
+        user_id: userId
+      }])
+      .select();
+
+    if (error) throw error;
+    return data[0];
+  },
+
+  async followPin(pinId, userId = 'anonymous') {
+    // This would typically go to a separate follows table
+    // For now, we'll use the activities table
+    const { data, error } = await supabase
+      .from(TABLES.ACTIVITIES)
+      .insert([{
+        type: 'pin_followed',
+        data: { pin_id: pinId },
+        user_id: userId
+      }])
+      .select();
+
+    if (error) throw error;
+    return data[0];
+  },
+
+  async getTrendingPins(timeframe = '7d', limit = 10) {
+    // Calculate trending based on recent activity
+    const timeAgo = new Date();
+    timeAgo.setDate(timeAgo.getDate() - (timeframe === '7d' ? 7 : timeframe === '1d' ? 1 : 30));
+
+    const { data, error } = await supabase
+      .from(TABLES.PINS)
+      .select(`
+        *,
+        feedback:feedback!inner(count),
+        comments:comments(count),
+        activities:activities(count)
+      `)
+      .gte('updated_at', timeAgo.toISOString())
+      .order('updated_at', { ascending: false })
+      .limit(limit);
+
+    if (error) throw error;
+    return data;
   },
 
   async getFeedbackCount(pinId) {
