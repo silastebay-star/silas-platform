@@ -1557,6 +1557,378 @@ function ServiceDirectory({ layer, onClose }) {
   );
 }
 
+// Faith Layer Quick Actions
+function ScheduleService({ layer, onClose }) {
+  const [formData, setFormData] = useState({
+    title: '',
+    date: '',
+    time: '',
+    location: 'Community Center',
+    description: '',
+    capacity: '50'
+  });
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Schedule Service</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Service Title</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            placeholder="e.g., Sunday Morning Service"
+            value={formData.title}
+            onChange={(e) => setFormData({...formData, title: e.target.value})}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+            <input
+              type="date"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.date}
+              onChange={(e) => setFormData({...formData, date: e.target.value})}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+            <input
+              type="time"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.time}
+              onChange={(e) => setFormData({...formData, time: e.target.value})}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+            <select
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.location}
+              onChange={(e) => setFormData({...formData, location: e.target.value})}
+            >
+              <option>Community Center</option>
+              <option>Parish Hall</option>
+              <option>Village Green</option>
+              <option>Town Square</option>
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Capacity</label>
+            <input
+              type="number"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.capacity}
+              onChange={(e) => setFormData({...formData, capacity: e.target.value})}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <textarea
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm h-20"
+            placeholder="Service details and special notes..."
+            value={formData.description}
+            onChange={(e) => setFormData({...formData, description: e.target.value})}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+            Schedule Service
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CreateEvent({ layer, onClose }) {
+  const [formData, setFormData] = useState({
+    title: '',
+    type: 'Community Gathering',
+    date: '',
+    time: '',
+    location: '',
+    description: '',
+    isRecurring: false
+  });
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Create Event</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Event Title</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            placeholder="e.g., Community Prayer Circle"
+            value={formData.title}
+            onChange={(e) => setFormData({...formData, title: e.target.value})}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Event Type</label>
+          <select
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            value={formData.type}
+            onChange={(e) => setFormData({...formData, type: e.target.value})}
+          >
+            <option>Community Gathering</option>
+            <option>Prayer Meeting</option>
+            <option>Bible Study</option>
+            <option>Outreach Event</option>
+            <option>Fellowship</option>
+            <option>Youth Activity</option>
+          </select>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+            <input
+              type="date"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.date}
+              onChange={(e) => setFormData({...formData, date: e.target.value})}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
+            <input
+              type="time"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+              value={formData.time}
+              onChange={(e) => setFormData({...formData, time: e.target.value})}
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            placeholder="Event location"
+            value={formData.location}
+            onChange={(e) => setFormData({...formData, location: e.target.value})}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+          <textarea
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm h-20"
+            placeholder="Event details..."
+            value={formData.description}
+            onChange={(e) => setFormData({...formData, description: e.target.value})}
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            id="recurring"
+            checked={formData.isRecurring}
+            onChange={(e) => setFormData({...formData, isRecurring: e.target.checked})}
+          />
+          <label htmlFor="recurring" className="text-sm text-gray-700">Recurring event</label>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+            Create Event
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function JoinMinistry({ layer, onClose }) {
+  const [ministries, setMinistries] = useState([
+    { id: 1, name: "Music Ministry", description: "Lead worship through music", commitment: "Weekly", members: 12 },
+    { id: 2, name: "Children's Ministry", description: "Teaching and caring for children", commitment: "Bi-weekly", members: 8 },
+    { id: 3, name: "Outreach Ministry", description: "Community service and evangelism", commitment: "Monthly", members: 15 },
+    { id: 4, name: "Prayer Ministry", description: "Intercessory prayer and support", commitment: "Weekly", members: 20 }
+  ]);
+  const [selectedMinistry, setSelectedMinistry] = useState(null);
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Join Ministry</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="space-y-3">
+        {ministries.map(ministry => (
+          <Card
+            key={ministry.id}
+            className={`p-3 cursor-pointer transition-all ${
+              selectedMinistry === ministry.id ? 'ring-2 ring-blue-500' : 'hover:shadow-md'
+            }`}
+            onClick={() => setSelectedMinistry(ministry.id)}
+          >
+            <div className="space-y-2">
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <h4 className="font-medium text-gray-900">{ministry.name}</h4>
+                  <p className="text-sm text-gray-600">{ministry.description}</p>
+                  <p className="text-xs text-gray-500">Commitment: {ministry.commitment} • {ministry.members} members</p>
+                </div>
+                <div className="flex items-center">
+                  <input
+                    type="radio"
+                    name="ministry"
+                    checked={selectedMinistry === ministry.id}
+                    onChange={() => setSelectedMinistry(ministry.id)}
+                  />
+                </div>
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+
+      {selectedMinistry && (
+        <div className="space-y-3 p-3 bg-gray-50 rounded-lg">
+          <h4 className="font-medium">Application Details</h4>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Why do you want to join?</label>
+            <textarea
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm h-16"
+              placeholder="Share your motivation..."
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Relevant experience</label>
+            <textarea
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm h-16"
+              placeholder="Any relevant skills or experience..."
+            />
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <Button variant="outline" onClick={onClose}>Cancel</Button>
+        <Button
+          disabled={!selectedMinistry}
+          style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}
+        >
+          Submit Application
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function ShareTestimony({ layer, onClose }) {
+  const [formData, setFormData] = useState({
+    title: '',
+    category: 'Personal Growth',
+    testimony: '',
+    isAnonymous: false,
+    allowSharing: true
+  });
+
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>Share Testimony</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+          <input
+            type="text"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            placeholder="Brief title for your testimony"
+            value={formData.title}
+            onChange={(e) => setFormData({...formData, title: e.target.value})}
+          />
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
+          <select
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+            value={formData.category}
+            onChange={(e) => setFormData({...formData, category: e.target.value})}
+          >
+            <option>Personal Growth</option>
+            <option>Healing & Recovery</option>
+            <option>Community Impact</option>
+            <option>Faith Journey</option>
+            <option>Answered Prayer</option>
+            <option>Service & Ministry</option>
+          </select>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Your Testimony</label>
+          <textarea
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm h-32"
+            placeholder="Share your story and how it has impacted your life or community..."
+            value={formData.testimony}
+            onChange={(e) => setFormData({...formData, testimony: e.target.value})}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="anonymous"
+              checked={formData.isAnonymous}
+              onChange={(e) => setFormData({...formData, isAnonymous: e.target.checked})}
+            />
+            <label htmlFor="anonymous" className="text-sm text-gray-700">Share anonymously</label>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <input
+              type="checkbox"
+              id="sharing"
+              checked={formData.allowSharing}
+              onChange={(e) => setFormData({...formData, allowSharing: e.target.checked})}
+            />
+            <label htmlFor="sharing" className="text-sm text-gray-700">Allow sharing with other communities</label>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}>
+            Share Testimony
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Tool Renderer Function
 function renderTool(tool, layer, onClose) {
   const toolComponents = {
@@ -1625,11 +1997,44 @@ function renderTool(tool, layer, onClose) {
   );
 }
 
+// Quick Action Renderer Function
+function renderQuickAction(action, layer, onClose) {
+  const actionComponents = {
+    'Faith': {
+      'Schedule Service': () => <ScheduleService layer={layer} onClose={onClose} />,
+      'Create Event': () => <CreateEvent layer={layer} onClose={onClose} />,
+      'Join Ministry': () => <JoinMinistry layer={layer} onClose={onClose} />,
+      'Share Testimony': () => <ShareTestimony layer={layer} onClose={onClose} />
+    }
+  };
+
+  const layerActions = actionComponents[layer];
+  if (layerActions && layerActions[action]) {
+    return layerActions[action]();
+  }
+
+  // Default action placeholder for actions not yet implemented
+  return (
+    <div className="p-4 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="font-semibold text-lg" style={{ color: LAYER_CONFIG[layer]?.color }}>{action}</h3>
+        <Button variant="ghost" size="icon" onClick={onClose}><X size={16} /></Button>
+      </div>
+      <div className="text-center py-8 text-gray-500">
+        <div className="text-4xl mb-2">⚡</div>
+        <p className="font-medium">Quick Action</p>
+        <p className="text-sm">This action is under development</p>
+      </div>
+    </div>
+  );
+}
+
 function PageOverlay({ layer, onClose, onFlyTo, onSelectFeature, onShowMetrics, onPinAction, onVote }) {
   const Icon = LAYER_CONFIG[layer]?.icon;
   const [posts, setPosts] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTool, setActiveTool] = useState(null);
+  const [activeAction, setActiveAction] = useState(null);
 
   const layerDetails = {
     Faith: {
@@ -1712,6 +2117,15 @@ function PageOverlay({ layer, onClose, onFlyTo, onSelectFeature, onShowMetrics, 
     );
   }
 
+  // If a quick action is active, show the action content
+  if (activeAction) {
+    return (
+      <div className="h-full flex flex-col">
+        {renderQuickAction(activeAction, layer, () => setActiveAction(null))}
+      </div>
+    );
+  }
+
   return (
     <div className="h-full flex flex-col">
       <div className="p-6 border-b" style={{ borderColor: LAYER_CONFIG[layer]?.color }}>
@@ -1765,10 +2179,7 @@ function PageOverlay({ layer, onClose, onFlyTo, onSelectFeature, onShowMetrics, 
                 size="sm"
                 className="text-xs justify-start hover:shadow-md transition-all"
                 style={{ backgroundColor: LAYER_CONFIG[layer]?.color }}
-                onClick={() => {
-                  // Handle quick actions here
-                  console.log(`Performing action: ${action} for layer: ${layer}`);
-                }}
+                onClick={() => setActiveAction(action)}
               >
                 {action}
               </Button>
