@@ -16,20 +16,30 @@ const BulkPinModal = ({ isOpen, onClose, centerPosition, onConfirm }) => {
   });
 
   const handleConfirm = () => {
+    if (!centerPosition) {
+      alert('Center position is required');
+      return;
+    }
+
     const totalPins = bulkData.rows * bulkData.cols;
     const coordinates = [];
-    
-    // Generate grid coordinates (simplified - in production would use proper projection)
-    const startLat = centerPosition.lat - ((bulkData.rows - 1) * bulkData.spacing * 0.00001) / 2;
-    const startLng = centerPosition.lng - ((bulkData.cols - 1) * bulkData.spacing * 0.00001) / 2;
+
+    // Generate grid coordinates with proper spacing calculation
+    // Convert meters to approximate degrees (rough approximation for UK)
+    const metersToLat = bulkData.spacing / 111000; // 1 degree lat ≈ 111km
+    const metersToLng = bulkData.spacing / (111000 * Math.cos(centerPosition.lat * Math.PI / 180));
+
+    const startLat = centerPosition.lat - ((bulkData.rows - 1) * metersToLat) / 2;
+    const startLng = centerPosition.lng - ((bulkData.cols - 1) * metersToLng) / 2;
 
     for (let row = 0; row < bulkData.rows; row++) {
       for (let col = 0; col < bulkData.cols; col++) {
+        const pinNumber = row * bulkData.cols + col + 1;
         coordinates.push({
-          lat: startLat + (row * bulkData.spacing * 0.00001),
-          lng: startLng + (col * bulkData.spacing * 0.00001),
-          title: bulkData.titleTemplate.replace('{n}', (row * bulkData.cols + col + 1)),
-          description: bulkData.description,
+          lat: startLat + (row * metersToLat),
+          lng: startLng + (col * metersToLng),
+          title: bulkData.titleTemplate.replace('{n}', pinNumber),
+          description: bulkData.description || `Bulk created pin ${pinNumber}`,
           category: bulkData.category,
           priority: bulkData.priority
         });
