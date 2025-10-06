@@ -6,7 +6,7 @@ import * as turf from "@turf/turf";
 import { Button } from '@/components/ui/button.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Input } from '@/components/ui/input.jsx';
-import { X, MapPin, MessageCircle, ThumbsUp, Users, TrendingUp, Lightbulb, Briefcase, Church, Hammer, Database } from 'lucide-react';
+import { X, MapPin, MessageCircle, ThumbsUp, Users, TrendingUp, Lightbulb, Briefcase, Church, Hammer, Database, Plus } from 'lucide-react';
 import { supabaseHelpers } from './lib/supabase.js';
 import { CopilotModal } from './components/CopilotModal.jsx';
 import { Progress } from '@/components/ui/progress.jsx';
@@ -467,6 +467,19 @@ function MapboxCentral({ mapData, kmlUrl, onSelect, mapApiRef, activeLayer, onRi
               {layer}
             </button>
           ))}
+          <div className="border-t border-gray-200 mt-1 pt-1">
+            <button
+              className="w-full flex items-center gap-2 px-3 py-2 text-sm hover:bg-blue-50 text-left text-blue-700"
+              onClick={() => {
+                setContextMenu(null);
+                // TODO: Add bulk pin creation modal
+                console.log('Bulk pin creation at:', contextMenu.lngLat);
+              }}
+            >
+              <MapPin size={16} />
+              Create Multiple Pins
+            </button>
+          </div>
         </div>
       )}
       
@@ -495,7 +508,10 @@ function PinCreationForm({ layer, onSubmit, onCancel }) {
     contact: '',
     progress: 0,
     deadline: '',
-    resources: ''
+    resources: '',
+    // Enhanced fields
+    priority: 'normal', // normal, high, urgent
+    isIssue: false
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -601,6 +617,34 @@ function PinCreationForm({ layer, onSubmit, onCancel }) {
           />
         </div>
       )}
+
+      {/* Enhanced Priority Field */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Priority Level</label>
+        <select
+          value={formData.priority}
+          onChange={(e) => setFormData(prev => ({ ...prev, priority: e.target.value }))}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        >
+          <option value="normal">Normal</option>
+          <option value="high">High Priority</option>
+          <option value="urgent">Urgent</option>
+        </select>
+      </div>
+
+      {/* Issue Pin Toggle */}
+      <div className="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          id="isIssue"
+          checked={formData.isIssue}
+          onChange={(e) => setFormData(prev => ({ ...prev, isIssue: e.target.checked }))}
+          className="rounded"
+        />
+        <label htmlFor="isIssue" className="text-sm text-gray-700">
+          This is reporting an issue or problem
+        </label>
+      </div>
 
       <div>
         <label className="block text-sm font-medium text-gray-700 mb-1">Tags (optional)</label>
@@ -5700,16 +5744,42 @@ export default function SilasPlatform() {
         ...pinData,
         coords: showPinCreation.lngLat,
         category: showPinCreation.layer,
-        userId: 'anonymous'
+        userId: 'anonymous',
+        // Enhanced fields
+        metadata: {
+          priority: pinData.priority || 'normal',
+          isIssue: pinData.isIssue || false,
+          createdAt: new Date().toISOString()
+        }
       };
-      
+
       const createdPin = await supabaseHelpers.createPin(newPinData);
-      await supabaseHelpers.logActivity('pin_created', { pin_id: createdPin.id, name: pinData.name });
-      
+
+      // If it's an issue pin, create an issue flag
+      if (pinData.isIssue) {
+        const severity = pinData.priority === 'urgent' ? 1 : pinData.priority === 'high' ? 2 : 3;
+        console.log('Creating issue flag with severity:', severity);
+        // TODO: Create issue flag in database
+      }
+
+      await supabaseHelpers.logActivity('pin_created', {
+        pin_id: createdPin.id,
+        name: pinData.name,
+        priority: pinData.priority,
+        isIssue: pinData.isIssue
+      });
+
       setShowPinCreation(null);
       loadAllData();
-      
+
       console.log('Pin created successfully:', createdPin);
+
+      // Show success message with priority info
+      if (pinData.priority === 'urgent') {
+        alert('Urgent pin created! Community moderators will be notified.');
+      } else if (pinData.isIssue) {
+        alert('Issue pin created! This will be reviewed by community moderators.');
+      }
     } catch (error) {
       console.error('Error creating pin:', error);
     }
@@ -5737,7 +5807,19 @@ export default function SilasPlatform() {
       {/* UI Components */}
       <header className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center bg-white/95 backdrop-blur-md px-6 py-3 rounded-full shadow-xl border-2 transition-all" style={{ borderColor: LAYER_CONFIG[activeLayer]?.color || LAYER_CONFIG.Economy.color }}>
         <img src={silasLogo} alt="SILAS" className="h-8 w-8 mr-3" />
-        <div className="font-bold text-xl mr-6" style={{ color: LAYER_CONFIG[activeLayer]?.color || LAYER_CONFIG.Economy.color }}>SILAS</div>
+        <div className="font-bold text-xl mr-4" style={{ color: LAYER_CONFIG[activeLayer]?.color || LAYER_CONFIG.Economy.color }}>SILAS</div>
+
+        {/* Simple Admin Button */}
+        <button
+          onClick={() => {
+            console.log('Admin panel - manage pin proposals and issues');
+            alert('Admin Panel: Pin proposals, issue management, and moderation tools (coming soon)');
+          }}
+          className="mr-4 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+          title="Admin Panel"
+        >
+          Admin
+        </button>
         <div className="flex items-center gap-2 mr-6 bg-gray-100 rounded-full p-1">
           <button onClick={() => setViewMode("map")} className={`px-4 py-1 rounded-full text-sm font-medium transition-all ${viewMode === "map" ? "bg-white shadow-md" : "bg-transparent text-gray-600"}`}>
             Map
@@ -5985,6 +6067,18 @@ export default function SilasPlatform() {
           />
         </Card>
       )}
+
+      {/* Mobile Quick Pin Button */}
+      <button
+        onClick={() => {
+          // TODO: Add mobile quick pin modal
+          console.log('Mobile quick pin');
+        }}
+        className="fixed bottom-20 right-4 z-40 h-14 w-14 rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center md:hidden"
+        title="Quick Pin"
+      >
+        <Plus className="h-6 w-6" />
+      </button>
 
       <footer className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 text-xs text-gray-600 bg-white/80 backdrop-blur-sm px-6 py-2 rounded-full shadow-md">
         SILAS • Stoneclough Initiative for Local & Autonomous Systems
