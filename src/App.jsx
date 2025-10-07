@@ -18,6 +18,10 @@ import MobilePinDropper from './components/MobilePinDropper.jsx';
 import FloatingCategoryWeb from './components/FloatingCategoryWeb.jsx';
 import FloatingCalendar from './components/FloatingCalendar.jsx';
 import PinCard from './components/PinCard.jsx';
+import DraggableFloatingButton from './components/DraggableFloatingButton.jsx';
+import DraggablePanel from './components/DraggablePanel.jsx';
+import CustomizationToolbar from './components/CustomizationToolbar.jsx';
+import { DragDropProvider, useDragDrop } from './contexts/DragDropContext.jsx';
 import { useMobileLocation } from './hooks/useMobileLocation.js';
 import { Progress } from '@/components/ui/progress.jsx';
 import silasLogo from './assets/silas-logo.png';
@@ -5901,8 +5905,78 @@ export default function SilasPlatform() {
 
   const LayerIcon = activeLayer ? LAYER_CONFIG[activeLayer]?.icon : Briefcase;
 
+  // Draggable Floating Buttons Container Component
+  const DraggableFloatingButtonsContainer = ({
+    showCategoryWeb, setShowCategoryWeb,
+    showFloatingCalendar, setShowFloatingCalendar,
+    showSocialPanel, setShowSocialPanel,
+    setShowAdminPanel, notifications, setShowNotifications, showNotifications,
+    mobilePinDropMode, setMobilePinDropMode, setShowQuickPin, isMobile
+  }) => {
+    const { getCurrentLayout } = useDragDrop();
+    const layout = getCurrentLayout();
+
+    const buttonHandlers = {
+      'categories': () => setShowCategoryWeb(!showCategoryWeb),
+      'calendar': () => setShowFloatingCalendar(!showFloatingCalendar),
+      'notifications': () => setShowNotifications(!showNotifications),
+      'social': () => setShowSocialPanel(!showSocialPanel),
+      'admin': () => setShowAdminPanel(true),
+      'quick-pin': () => setShowQuickPin(true),
+      'pin-drop': () => setMobilePinDropMode(!mobilePinDropMode)
+    };
+
+    const getButtonState = (buttonId) => {
+      switch(buttonId) {
+        case 'categories': return showCategoryWeb;
+        case 'calendar': return showFloatingCalendar;
+        case 'social': return showSocialPanel;
+        case 'pin-drop': return mobilePinDropMode;
+        default: return false;
+      }
+    };
+
+    const renderFloatingButtons = () => {
+      const allButtons = [];
+
+      // Render buttons from all zones
+      Object.keys(layout.floatingButtons).forEach(zone => {
+        layout.floatingButtons[zone].forEach(button => {
+          const isActive = getButtonState(button.id);
+          const handler = buttonHandlers[button.id];
+
+          if (button.id === 'notifications') {
+            // Special handling for notifications
+            allButtons.push(
+              <div key={button.id} style={{ position: 'fixed', left: button.position.x, top: button.position.y, zIndex: 50 }}>
+                <NotificationBell
+                  notificationCount={notifications.filter(n => !n.read).length}
+                  onClick={() => setShowNotifications(!showNotifications)}
+                />
+              </div>
+            );
+          } else {
+            allButtons.push(
+              <DraggableFloatingButton
+                key={button.id}
+                item={button}
+                onClick={handler}
+                isActive={isActive}
+              />
+            );
+          }
+        });
+      });
+
+      return allButtons;
+    };
+
+    return <>{renderFloatingButtons()}</>;
+  };
+
   return (
-    <div className="relative h-screen w-full overflow-hidden bg-gray-100">
+    <DragDropProvider>
+      <div className="relative h-screen w-full overflow-hidden bg-gray-100">
       <div className="absolute inset-0 z-0">
         <MapboxCentral
         mapData={mapData}
@@ -5917,70 +5991,43 @@ export default function SilasPlatform() {
       </div>
 
       {/* UI Components */}
-      {/* Floating Control Buttons - Top Left */}
-      <div className="fixed top-4 left-4 z-40 flex flex-col space-y-3">
-        {/* Category Web Button */}
-        <button
-          onClick={() => setShowCategoryWeb(!showCategoryWeb)}
-          className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-white transition-all ${
-            showCategoryWeb ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-700'
-          }`}
-          title="Categories"
-        >
-          {showCategoryWeb ? <X className="h-6 w-6" /> : <Grid3X3 className="h-6 w-6" />}
-        </button>
-
-        {/* Calendar Button */}
-        <button
-          onClick={() => setShowFloatingCalendar(!showFloatingCalendar)}
-          className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-white transition-all ${
-            showFloatingCalendar ? 'bg-red-500 hover:bg-red-600' : 'bg-purple-600 hover:bg-purple-700'
-          }`}
-          title="Community Calendar"
-        >
-          {showFloatingCalendar ? <X className="h-6 w-6" /> : <Calendar className="h-6 w-6" />}
-        </button>
-      </div>
-
-      {/* Floating Control Buttons - Top Right */}
-      <div className="fixed top-4 right-4 z-40 flex flex-col space-y-3">
-        {/* Notifications */}
-        <div className="relative">
-          <NotificationBell
-            notificationCount={notifications.filter(n => !n.read).length}
-            onClick={() => setShowNotifications(!showNotifications)}
-          />
-        </div>
-
-        {/* Social Panel Toggle */}
-        <button
-          onClick={() => setShowSocialPanel(!showSocialPanel)}
-          className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-white transition-all ${
-            showSocialPanel ? 'bg-red-500 hover:bg-red-600' : 'bg-green-600 hover:bg-green-700'
-          }`}
-          title="Social Panel"
-        >
-          {showSocialPanel ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
-        </button>
-
-        {/* Admin Panel */}
-        <button
-          onClick={() => setShowAdminPanel(true)}
-          className="w-12 h-12 rounded-full shadow-lg bg-gray-600 hover:bg-gray-700 text-white flex items-center justify-center transition-all"
-          title="Admin Panel"
-        >
-          <Settings className="h-6 w-6" />
-        </button>
-      </div>
+      {/* Draggable Floating Buttons */}
+      <DraggableFloatingButtonsContainer
+        showCategoryWeb={showCategoryWeb}
+        setShowCategoryWeb={setShowCategoryWeb}
+        showFloatingCalendar={showFloatingCalendar}
+        setShowFloatingCalendar={setShowFloatingCalendar}
+        showSocialPanel={showSocialPanel}
+        setShowSocialPanel={setShowSocialPanel}
+        setShowAdminPanel={setShowAdminPanel}
+        notifications={notifications}
+        setShowNotifications={setShowNotifications}
+        showNotifications={showNotifications}
+        mobilePinDropMode={mobilePinDropMode}
+        setMobilePinDropMode={setMobilePinDropMode}
+        setShowQuickPin={setShowQuickPin}
+        isMobile={isMobile}
+      />
 
       {/* Enhanced Social Panel */}
-      <SocialPanel
-        pins={socialFeedPins}
-        activeLayer={activeLayer}
-        onItemClick={handleFeedItemClick}
-        onClose={() => setShowSocialPanel(false)}
-        isVisible={showSocialPanel}
-      />
+      {showSocialPanel && (
+        <DraggablePanel
+          id="social"
+          title="Social Feed"
+          onClose={() => setShowSocialPanel(false)}
+          defaultPosition={{ x: window.innerWidth - 400, y: 0 }}
+          defaultSize={{ width: 400, height: window.innerHeight }}
+        >
+          <SocialPanel
+            pins={socialFeedPins}
+            activeLayer={activeLayer}
+            onItemClick={handleFeedItemClick}
+            onClose={() => setShowSocialPanel(false)}
+            isVisible={true}
+            embedded={true}
+          />
+        </DraggablePanel>
+      )}
 
       {selectedFeature && viewMode === "map" && (
         <Card className="absolute top-24 right-6 z-30 w-[420px] bg-white/98 backdrop-blur-md shadow-2xl border-2 animate-in fade-in slide-in-from-right-4 duration-300" style={{ borderColor: LAYER_CONFIG[selectedFeature.properties?.layer || "Economy"]?.color }}>
@@ -6241,19 +6288,29 @@ export default function SilasPlatform() {
       />
 
       {/* Floating Calendar */}
-      <FloatingCalendar
-        isOpen={showFloatingCalendar}
-        onClose={() => setShowFloatingCalendar(false)}
-        events={communityEvents}
-        onEventAdd={(newEvent) => {
-          setCommunityEvents(prev => [...prev, newEvent]);
-        }}
-        onEventClick={(event) => {
-          console.log('Event clicked:', event);
-          // TODO: Show event details or navigate to event location
-        }}
-        position={{ x: window.innerWidth - 350, y: 100 }}
-      />
+      {showFloatingCalendar && (
+        <DraggablePanel
+          id="calendar"
+          title="Community Calendar"
+          onClose={() => setShowFloatingCalendar(false)}
+          defaultPosition={{ x: window.innerWidth - 350, y: 100 }}
+          defaultSize={{ width: 320, height: 500 }}
+        >
+          <FloatingCalendar
+            isOpen={true}
+            onClose={() => setShowFloatingCalendar(false)}
+            events={communityEvents}
+            onEventAdd={(newEvent) => {
+              setCommunityEvents(prev => [...prev, newEvent]);
+            }}
+            onEventClick={(event) => {
+              console.log('Event clicked:', event);
+              // TODO: Show event details or navigate to event location
+            }}
+            embedded={true}
+          />
+        </DraggablePanel>
+      )}
 
       {boundsWarning && (
         <div className="absolute top-32 left-1/2 -translate-x-1/2 z-50 bg-red-500 text-white px-6 py-4 rounded-lg shadow-xl border-2 border-red-600 animate-in fade-in slide-in-from-top-4 duration-300">
@@ -6319,9 +6376,13 @@ export default function SilasPlatform() {
         </div>
       )}
 
+      {/* Customization Toolbar */}
+      <CustomizationToolbar />
+
       <footer className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 text-xs text-gray-600 bg-white/80 backdrop-blur-sm px-6 py-2 rounded-full shadow-md">
         SILAS • Stoneclough Initiative for Local & Autonomous Systems
       </footer>
     </div>
+    </DragDropProvider>
   );
 }
