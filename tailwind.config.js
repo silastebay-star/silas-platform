@@ -1,11 +1,11 @@
 /** @type {import('tailwindcss').Config} */
-export default {
+module.exports = {
   darkMode: ["class"],
   content: [
     './pages/**/*.{ts,tsx}',
     './components/**/*.{ts,tsx}',
     './app/**/*.{ts,tsx}',
-    './src/**/*.{ts,tsx,js,jsx}',
+    './src/**/*.{ts,tsx}',
   ],
   prefix: "",
   theme: {
@@ -21,8 +21,8 @@ export default {
         // SILAS Brand Colors
         silas: {
           green: '#4C764C',
-          dark: '#121212',
-          light: '#F9FAFB',
+          dark: '#1C1F1C',
+          light: '#E6F0E6',
           gray: '#6B7280',
         },
         // Category Colors

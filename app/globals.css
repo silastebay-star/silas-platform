@@ -1,0 +1,176 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* SILAS Theme Variables */
+:root {
+  --silas-green: #4C764C;
+  --silas-dark: #1C1F1C;
+  --silas-light: #E6F0E6;
+  
+  /* Shadcn UI Variables */
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 142 69% 38%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 96%;
+  --secondary-foreground: 222.2 84% 4.9%;
+  --muted: 210 40% 96%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 210 40% 96%;
+  --accent-foreground: 222.2 84% 4.9%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 142 69% 38%;
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 142 69% 38%;
+  --primary-foreground: 222.2 84% 4.9%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 217.2 32.6% 17.5%;
+  --accent-foreground: 210 40% 98%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 142 69% 38%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+
+/* SILAS Custom Styles */
+.bg-silas-green { 
+  background-color: var(--silas-green); 
+}
+
+.text-silas-green { 
+  color: var(--silas-green); 
+}
+
+.border-silas-green { 
+  border-color: var(--silas-green); 
+}
+
+.bg-silas-dark { 
+  background-color: var(--silas-dark); 
+}
+
+.text-silas-dark { 
+  color: var(--silas-dark); 
+}
+
+.bg-silas-light { 
+  background-color: var(--silas-light); 
+}
+
+.text-silas-light { 
+  color: var(--silas-light); 
+}
+
+/* Typography */
+.font-heading {
+  font-family: var(--font-orbitron), monospace;
+}
+
+/* Custom Components */
+.silas-card {
+  @apply bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow;
+}
+
+.silas-button {
+  @apply bg-silas-green text-white px-6 py-3 rounded-lg font-medium hover:bg-opacity-90 transition-all;
+}
+
+/* Map Styles */
+.mapboxgl-popup {
+  max-width: 300px;
+}
+
+.mapboxgl-popup-content {
+  @apply rounded-lg shadow-lg;
+}
+
+.mapboxgl-popup-close-button {
+  @apply text-gray-400 hover:text-gray-600;
+}
+
+/* Pin Marker Styles */
+.pin-marker {
+  cursor: pointer;
+  transition: transform 0.2s ease;
+}
+
+.pin-marker:hover {
+  transform: scale(1.1);
+}
+
+/* Loading Animation */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .silas-card {
+    @apply p-4;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .pin-marker,
+  .silas-button,
+  .silas-card {
+    transition: none;
+  }
+  
+  .animate-spin {
+    animation: none;
+  }
+}
+
+/* Print Styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  * {
+    background: white !important;
+    color: black !important;
+  }
+}
