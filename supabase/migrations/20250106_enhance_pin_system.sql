@@ -1,13 +1,31 @@
 -- Enhanced Pin System Migration
--- Adds new features to existing pin system without breaking current functionality
+-- Comprehensive pin cards and project system
 
--- Add new columns to existing pins table (if it exists)
+-- Enhanced pins table with card-based structure
 DO $$
 BEGIN
-    -- Check if pins table exists and add metadata column if missing
+    -- Add enhanced columns to pins table
     IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'pins') THEN
+        -- Add metadata if missing
         IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'pins' AND column_name = 'metadata') THEN
             ALTER TABLE pins ADD COLUMN metadata jsonb DEFAULT '{}';
+        END IF;
+
+        -- Add card-specific fields
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'pins' AND column_name = 'card_type') THEN
+            ALTER TABLE pins ADD COLUMN card_type text DEFAULT 'individual' CHECK (card_type IN ('individual', 'project_parent', 'project_child'));
+        END IF;
+
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'pins' AND column_name = 'parent_project_id') THEN
+            ALTER TABLE pins ADD COLUMN parent_project_id uuid REFERENCES pins(id) ON DELETE CASCADE;
+        END IF;
+
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'pins' AND column_name = 'display_order') THEN
+            ALTER TABLE pins ADD COLUMN display_order integer DEFAULT 0;
+        END IF;
+
+        IF NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'pins' AND column_name = 'card_data') THEN
+            ALTER TABLE pins ADD COLUMN card_data jsonb DEFAULT '{}';
         END IF;
     END IF;
 END $$;
@@ -97,6 +115,53 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
+-- Create community events table for calendar system
+CREATE TABLE IF NOT EXISTS community_events (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  title text NOT NULL,
+  description text,
+  event_type text DEFAULT 'general' CHECK (event_type IN ('general', 'meeting', 'workshop', 'social', 'emergency', 'maintenance')),
+  start_datetime timestamptz NOT NULL,
+  end_datetime timestamptz,
+  location_name text,
+  location_coordinates point,
+  pin_id uuid REFERENCES pins(id) ON DELETE SET NULL,
+  organizer_id text DEFAULT 'anonymous',
+  max_attendees integer,
+  current_attendees integer DEFAULT 0,
+  is_recurring boolean DEFAULT false,
+  recurrence_pattern jsonb DEFAULT '{}',
+  tags text[] DEFAULT '{}',
+  metadata jsonb DEFAULT '{}',
+  created_at timestamptz DEFAULT now(),
+  updated_at timestamptz DEFAULT now()
+);
+
+-- Create dynamic categories table
+CREATE TABLE IF NOT EXISTS pin_categories (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  name text NOT NULL UNIQUE,
+  display_name text NOT NULL,
+  description text,
+  icon_name text,
+  color text DEFAULT '#6B7280',
+  is_active boolean DEFAULT true,
+  display_order integer DEFAULT 0,
+  created_by text DEFAULT 'system',
+  metadata jsonb DEFAULT '{}',
+  created_at timestamptz DEFAULT now()
+);
+
+-- Insert default categories
+INSERT INTO pin_categories (name, display_name, description, icon_name, color, display_order) VALUES
+  ('faith', 'Faith', 'Religious and spiritual community activities', 'Church', '#8B5CF6', 1),
+  ('commerce', 'Commerce', 'Local businesses and economic activities', 'Briefcase', '#10B981', 2),
+  ('works', 'Works', 'Community projects and infrastructure', 'Hammer', '#F59E0B', 3),
+  ('circle', 'Circle', 'Social gatherings and community events', 'Users', '#EF4444', 4),
+  ('mind', 'Mind', 'Education and learning opportunities', 'Lightbulb', '#3B82F6', 5),
+  ('pulse', 'Pulse', 'Health and wellness activities', 'TrendingUp', '#EC4899', 6)
+ON CONFLICT (name) DO NOTHING;
+
 -- Function to check if a cell is blocked
 CREATE OR REPLACE FUNCTION is_cell_blocked(
   p_community_id uuid,
@@ -105,9 +170,9 @@ CREATE OR REPLACE FUNCTION is_cell_blocked(
 ) RETURNS boolean AS $$
 BEGIN
   RETURN EXISTS (
-    SELECT 1 FROM pin_block_cells 
-    WHERE community_id = p_community_id 
-    AND cell_x = p_cell_x 
+    SELECT 1 FROM pin_block_cells
+    WHERE community_id = p_community_id
+    AND cell_x = p_cell_x
     AND cell_y = p_cell_y
   );
 END;
