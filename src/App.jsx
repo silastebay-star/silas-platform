@@ -24,6 +24,7 @@ import CustomizationToolbar from './components/CustomizationToolbar.jsx';
 import SilasHeader from './components/SilasHeader.jsx';
 import CategoryPortal from './components/CategoryPortal.jsx';
 import SilasPinDetail from './components/SilasPinDetail.jsx';
+import EnhancedPinCreation from './components/EnhancedPinCreation.jsx';
 import { DragDropProvider, useDragDrop } from './contexts/DragDropContext.jsx';
 import { SILAS_BRANDING } from './styles/silasBranding.js';
 import { useMobileLocation } from './hooks/useMobileLocation.js';

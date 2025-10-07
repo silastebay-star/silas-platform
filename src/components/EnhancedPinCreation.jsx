@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { X, MapPin, Camera, Calendar, Users, Tag, Star, AlertTriangle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { SILAS_BRANDING, getCategoryColor, getCategoryGradient } from '../styles/silasBranding.js';
 import { SILAS_CATEGORY_FRAMEWORK } from '../config/categoryFramework.js';
 import MobilePhotoUpload from './MobilePhotoUpload.jsx';

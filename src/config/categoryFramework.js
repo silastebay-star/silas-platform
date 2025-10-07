@@ -1,10 +1,10 @@
 // SILAS Category Framework v2.0
 // Comprehensive category system with subcategories, pin types, and social features
 
-import { 
-  Church, Heart, BookOpen, Users, Briefcase, ShoppingCart, 
+import {
+  Church, Heart, BookOpen, Users, Briefcase, ShoppingCart,
   Hammer, Zap, TreePine, MessageCircle, GraduationCap, Lightbulb,
-  Activity, Stethoscope, Leaf, Palette, Music, Camera
+  Activity, Heart as Stethoscope, Leaf, Palette, Music, Camera
 } from 'lucide-react';
 
 export const SILAS_CATEGORY_FRAMEWORK = {
