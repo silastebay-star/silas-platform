@@ -32,8 +32,8 @@ export const SILAS_BRANDING = {
     mindLight: '#60A5FA',
     mindDark: '#2563EB',
     pulseLight: '#F472B6',
-    pulseDark: '#DB2777'
-    
+    pulseDark: '#DB2777',
+
     // Neutral Colors
     gray: {
       50: '#F9FAFB',
