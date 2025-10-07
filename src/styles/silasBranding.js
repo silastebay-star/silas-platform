@@ -12,13 +12,27 @@ export const SILAS_BRANDING = {
     accentDark: '#059669',
     accentLight: '#34D399',
     
-    // Category Colors (Enhanced)
-    faith: '#8B5CF6', // Purple
-    commerce: '#10B981', // Green
-    works: '#F59E0B', // Orange
-    circle: '#EF4444', // Red
-    mind: '#3B82F6', // Blue
-    pulse: '#EC4899', // Pink
+    // SILAS Category Framework v2.0 Colors
+    faith: '#8B5CF6', // Faith & Fellowship - Purple (spiritual, hopeful)
+    commerce: '#10B981', // Commerce & Trade - Green (prosperity, growth)
+    works: '#F59E0B', // Works & Infrastructure - Orange (construction, energy)
+    circle: '#EF4444', // Circle & Community - Red (connection, warmth)
+    mind: '#3B82F6', // Mind & Learning - Blue (knowledge, wisdom)
+    pulse: '#EC4899', // Pulse & Wellness - Pink (health, vitality)
+
+    // Enhanced category variations
+    faithLight: '#A78BFA',
+    faithDark: '#7C3AED',
+    commerceLight: '#34D399',
+    commerceDark: '#059669',
+    worksLight: '#FBBF24',
+    worksDark: '#D97706',
+    circleLight: '#F87171',
+    circleDark: '#DC2626',
+    mindLight: '#60A5FA',
+    mindDark: '#2563EB',
+    pulseLight: '#F472B6',
+    pulseDark: '#DB2777'
     
     // Neutral Colors
     gray: {
