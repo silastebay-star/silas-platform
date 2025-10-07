@@ -1,18 +1,9 @@
 {
   "version": 2,
-  "buildCommand": "pnpm run build",
-  "outputDirectory": "dist",
-  "installCommand": "pnpm install",
-  "framework": "vite",
-  "rewrites": [
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
-    }
-  ],
+  "framework": "nextjs",
   "headers": [
     {
-      "source": "/assets/(.*)",
+      "source": "/_next/static/(.*)",
       "headers": [
         {
           "key": "Cache-Control",
