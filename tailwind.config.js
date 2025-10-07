@@ -19,6 +19,10 @@ module.exports = {
     extend: {
       colors: {
         // SILAS Brand Colors
+        'silas-green': '#4C764C',
+        'silas-dark': '#1C1F1C',
+        'silas-light': '#E6F0E6',
+        'silas-gray': '#6B7280',
         silas: {
           green: '#4C764C',
           dark: '#1C1F1C',
