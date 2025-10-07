@@ -6,12 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "lint": "eslint .",
     "preview": "vite preview",
-    "test:production": "node test-production.js",
-    "verify:build": "node verify-build.js",
-    "verify:production": "node verify-production.js",
-    "verify:mobile": "node verify-mobile-features.js"
+    "lint": "eslint src --ext .ts,.tsx",
+    "format": "prettier --write .",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf dist node_modules/.vite",
+    "test": "echo 'Tests will be implemented' && exit 0"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",

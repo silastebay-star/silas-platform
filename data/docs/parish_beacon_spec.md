@@ -1,2 +1,0 @@
-Title: Parish Beacon Tool - spec
-Parish Beacon is a SILAS tool to list services, scripture, events, volunteer calls and run Crisis Mode. Features: event creation, scripture library, emergency broadcast, volunteer signups, and parish dashboards. Intended users: verified parish accounts (x10). Source: SILAS platform design.
