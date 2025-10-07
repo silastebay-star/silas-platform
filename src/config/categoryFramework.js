@@ -1,10 +1,11 @@
-// SILAS Category Framework v2.0
-// Comprehensive category system with subcategories, pin types, and social features
+// SILAS Category Framework v3.0
+// Unified 8-category system for comprehensive community intelligence
+// Building on existing Supabase setup and pin system
 
 import {
   Church, Heart, BookOpen, Users, Briefcase, ShoppingCart,
   Hammer, Zap, TreePine, MessageCircle, GraduationCap, Lightbulb,
-  Activity, Heart as Stethoscope, Leaf, Palette, Music, Camera
+  Activity, Leaf, Palette, Music, Camera, Scale, Building, Recycle
 } from 'lucide-react';
 
 export const SILAS_CATEGORY_FRAMEWORK = {
@@ -69,11 +70,11 @@ export const SILAS_CATEGORY_FRAMEWORK = {
     }
   },
 
-  // 🔶 2. Commerce & Trade
-  commerce: {
-    name: 'Commerce & Trade',
-    description: 'Foster local economy, entrepreneurship, and sustainable business',
-    tone: 'Enterprising, collaborative, and growth-focused',
+  // 🔶 2. Projects & Infrastructure
+  projects: {
+    name: 'Projects & Infrastructure',
+    description: 'Build resilient infrastructure and sustainable community projects',
+    tone: 'Practical, collaborative, and solution-oriented',
     color: '#10B981',
     icon: Briefcase,
     
@@ -371,6 +372,128 @@ export const SILAS_CATEGORY_FRAMEWORK = {
       wellnessPrograms: 'Structured wellness program management',
       supportGroups: 'Peer support group coordination',
       resourceDirectory: 'Health and wellness resource database'
+    }
+  },
+
+  // 🔶 7. Heritage & Culture
+  heritage: {
+    name: 'Heritage & Culture',
+    description: 'Preserve and celebrate local history and cultural traditions',
+    tone: 'Respectful, educational, and preserving',
+    color: '#7C3AED',
+    icon: BookOpen,
+
+    subcategories: {
+      history: {
+        name: 'Local History',
+        description: 'Historical sites and community heritage',
+        icon: BookOpen,
+        color: '#7C3AED'
+      },
+      monuments: {
+        name: 'Monuments & Landmarks',
+        description: 'Historic buildings and landmarks',
+        icon: Building,
+        color: '#8B5CF6'
+      },
+      traditions: {
+        name: 'Cultural Traditions',
+        description: 'Local customs and cultural practices',
+        icon: Palette,
+        color: '#A78BFA'
+      },
+      arts: {
+        name: 'Arts & Crafts',
+        description: 'Local arts, crafts, and creative expression',
+        icon: Camera,
+        color: '#C4B5FD'
+      },
+      stories: {
+        name: 'Community Stories',
+        description: 'Oral history and community narratives',
+        icon: MessageCircle,
+        color: '#DDD6FE'
+      }
+    },
+
+    pinTypes: [
+      'Historical Sites', 'Museums', 'Art Galleries', 'Cultural Centers',
+      'Heritage Trails', 'Monuments', 'Archives', 'Community Stories'
+    ],
+
+    socialFeatures: {
+      discussions: ['Historical Research', 'Cultural Exchange', 'Heritage Preservation'],
+      content: ['Historical Documents', 'Cultural Artifacts', 'Story Collections'],
+      events: ['Heritage Tours', 'Cultural Festivals', 'History Talks'],
+      preservation: ['Documentation Projects', 'Restoration Efforts', 'Archive Building']
+    },
+
+    integrations: {
+      archiveSystem: 'Digital heritage archive management',
+      storyCollection: 'Community story gathering and preservation',
+      heritageTrails: 'Interactive heritage trail mapping',
+      culturalCalendar: 'Cultural events and celebrations tracking'
+    }
+  },
+
+  // 🔶 8. Governance & Civic
+  governance: {
+    name: 'Governance & Civic',
+    description: 'Democratic participation and transparent community decision-making',
+    tone: 'Transparent, democratic, and accountable',
+    color: '#3B82F6',
+    icon: Scale,
+
+    subcategories: {
+      council: {
+        name: 'Local Council',
+        description: 'Local government and council activities',
+        icon: Building,
+        color: '#3B82F6'
+      },
+      voting: {
+        name: 'Voting & Elections',
+        description: 'Democratic processes and elections',
+        icon: Scale,
+        color: '#60A5FA'
+      },
+      planning: {
+        name: 'Planning & Development',
+        description: 'Community planning and development projects',
+        icon: Hammer,
+        color: '#93C5FD'
+      },
+      transparency: {
+        name: 'Transparency',
+        description: 'Open government and public information',
+        icon: BookOpen,
+        color: '#BFDBFE'
+      },
+      participation: {
+        name: 'Civic Participation',
+        description: 'Community engagement and citizen involvement',
+        icon: Users,
+        color: '#DBEAFE'
+      }
+    },
+
+    pinTypes: [
+      'Council Offices', 'Polling Stations', 'Public Meetings', 'Planning Applications',
+      'Civic Centers', 'Public Consultations', 'Community Forums', 'Transparency Boards'
+    ],
+
+    socialFeatures: {
+      discussions: ['Policy Discussions', 'Community Issues', 'Democratic Participation'],
+      content: ['Council Minutes', 'Planning Documents', 'Public Information'],
+      events: ['Council Meetings', 'Public Consultations', 'Civic Events'],
+      voting: ['Community Polls', 'Decision Making', 'Priority Setting']
+    },
+
+    integrations: {
+      votingSystem: 'Community voting and polling platform',
+      transparencyPortal: 'Public information and document access',
+      participationTracking: 'Civic engagement monitoring',
+      decisionMaking: 'Community decision-making tools'
     }
   }
 };
