@@ -6,7 +6,7 @@ import * as turf from "@turf/turf";
 import { Button } from '@/components/ui/button.jsx';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card.jsx';
 import { Input } from '@/components/ui/input.jsx';
-import { X, MapPin, MessageCircle, ThumbsUp, Users, TrendingUp, Lightbulb, Briefcase, Church, Hammer, Database, Plus } from 'lucide-react';
+import { X, MapPin, MessageCircle, ThumbsUp, Users, TrendingUp, Lightbulb, Briefcase, Church, Hammer, Database, Plus, Grid3X3, Calendar, Settings } from 'lucide-react';
 import { supabaseHelpers } from './lib/supabase.js';
 import { CopilotModal } from './components/CopilotModal.jsx';
 import BulkPinModal from './components/BulkPinModal.jsx';
@@ -15,6 +15,9 @@ import AdminPanel from './components/AdminPanel.jsx';
 import SocialPanel from './components/SocialPanel.jsx';
 import NotificationSystem, { NotificationBell } from './components/NotificationSystem.jsx';
 import MobilePinDropper from './components/MobilePinDropper.jsx';
+import FloatingCategoryWeb from './components/FloatingCategoryWeb.jsx';
+import FloatingCalendar from './components/FloatingCalendar.jsx';
+import PinCard from './components/PinCard.jsx';
 import { useMobileLocation } from './hooks/useMobileLocation.js';
 import { Progress } from '@/components/ui/progress.jsx';
 import silasLogo from './assets/silas-logo.png';
@@ -5607,6 +5610,10 @@ export default function SilasPlatform() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [mobilePinDropMode, setMobilePinDropMode] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showCategoryWeb, setShowCategoryWeb] = useState(false);
+  const [showFloatingCalendar, setShowFloatingCalendar] = useState(false);
+  const [customCategories, setCustomCategories] = useState([]);
+  const [communityEvents, setCommunityEvents] = useState([]);
   const [notifications, setNotifications] = useState([
     {
       id: 1,
@@ -5910,66 +5917,61 @@ export default function SilasPlatform() {
       </div>
 
       {/* UI Components */}
-      <header className="absolute top-4 left-1/2 -translate-x-1/2 z-40 flex items-center bg-white/95 backdrop-blur-md px-6 py-3 rounded-full shadow-xl border-2 transition-all" style={{ borderColor: LAYER_CONFIG[activeLayer]?.color || LAYER_CONFIG.Economy.color }}>
-        <img src={silasLogo} alt="SILAS" className="h-8 w-8 mr-3" />
-        <div className="font-bold text-xl mr-4" style={{ color: LAYER_CONFIG[activeLayer]?.color || LAYER_CONFIG.Economy.color }}>SILAS</div>
-
-        {/* Simple Admin Button */}
+      {/* Floating Control Buttons - Top Left */}
+      <div className="fixed top-4 left-4 z-40 flex flex-col space-y-3">
+        {/* Category Web Button */}
         <button
-          onClick={() => setShowAdminPanel(true)}
-          className="mr-4 px-2 py-1 text-xs bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-          title="Admin Panel"
+          onClick={() => setShowCategoryWeb(!showCategoryWeb)}
+          className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-white transition-all ${
+            showCategoryWeb ? 'bg-red-500 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-700'
+          }`}
+          title="Categories"
         >
-          Admin
+          {showCategoryWeb ? <X className="h-6 w-6" /> : <Grid3X3 className="h-6 w-6" />}
         </button>
-        <div className="flex items-center space-x-2 mr-6">
+
+        {/* Calendar Button */}
+        <button
+          onClick={() => setShowFloatingCalendar(!showFloatingCalendar)}
+          className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-white transition-all ${
+            showFloatingCalendar ? 'bg-red-500 hover:bg-red-600' : 'bg-purple-600 hover:bg-purple-700'
+          }`}
+          title="Community Calendar"
+        >
+          {showFloatingCalendar ? <X className="h-6 w-6" /> : <Calendar className="h-6 w-6" />}
+        </button>
+      </div>
+
+      {/* Floating Control Buttons - Top Right */}
+      <div className="fixed top-4 right-4 z-40 flex flex-col space-y-3">
+        {/* Notifications */}
+        <div className="relative">
           <NotificationBell
             notificationCount={notifications.filter(n => !n.read).length}
             onClick={() => setShowNotifications(!showNotifications)}
           />
-          <Button
-            variant={showSocialPanel ? "default" : "outline"}
-            size="sm"
-            onClick={() => setShowSocialPanel(!showSocialPanel)}
-            className="text-xs"
-          >
-            <MessageCircle size={14} className="mr-1" />
-            Social
-          </Button>
         </div>
-        <nav className="flex gap-2 text-sm">
-          {Object.keys(LAYER_CONFIG).map((layer) => (
-            <button
-              key={layer}
-              onClick={() => {
-                if (activeLayer === layer && openPage === layer) {
-                  // If clicking the same active layer with open page, close the page
-                  setOpenPage(null);
-                } else if (activeLayer === layer) {
-                  // If clicking the same active layer without open page, open the page
-                  setOpenPage(layer !== "All" ? layer : null);
-                } else {
-                  // If clicking a different layer, set it as active and open its page
-                  setActiveLayer(layer);
-                  setOpenPage(layer !== "All" ? layer : null);
-                }
-              }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full font-medium transition-all ${
-                activeLayer === layer
-                  ? openPage === layer
-                    ? "shadow-lg text-white ring-2 ring-white/30"
-                    : "shadow-md text-white"
-                  : "text-gray-600 hover:bg-gray-100"
-              }`}
-              style={activeLayer === layer ? { backgroundColor: LAYER_CONFIG[layer].color } : {}}
-              title={layer !== "All" ? `View ${layer} layer and tools` : `View all layers`}
-            >
-              {React.createElement(LAYER_CONFIG[layer].icon, { size: 14 })}
-              {layer}
-            </button>
-          ))}
-        </nav>
-      </header>
+
+        {/* Social Panel Toggle */}
+        <button
+          onClick={() => setShowSocialPanel(!showSocialPanel)}
+          className={`w-12 h-12 rounded-full shadow-lg flex items-center justify-center text-white transition-all ${
+            showSocialPanel ? 'bg-red-500 hover:bg-red-600' : 'bg-green-600 hover:bg-green-700'
+          }`}
+          title="Social Panel"
+        >
+          {showSocialPanel ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
+        </button>
+
+        {/* Admin Panel */}
+        <button
+          onClick={() => setShowAdminPanel(true)}
+          className="w-12 h-12 rounded-full shadow-lg bg-gray-600 hover:bg-gray-700 text-white flex items-center justify-center transition-all"
+          title="Admin Panel"
+        >
+          <Settings className="h-6 w-6" />
+        </button>
+      </div>
 
       {/* Enhanced Social Panel */}
       <SocialPanel
@@ -6215,6 +6217,42 @@ export default function SilasPlatform() {
         onCancel={() => setMobilePinDropMode(false)}
         mapRef={mapApiRef}
         LAYER_CONFIG={LAYER_CONFIG}
+      />
+
+      {/* Floating Category Web */}
+      <FloatingCategoryWeb
+        isOpen={showCategoryWeb}
+        onClose={() => setShowCategoryWeb(false)}
+        categories={customCategories}
+        activeCategory={activeLayer}
+        onCategorySelect={(category) => {
+          setActiveLayer(category);
+          setShowCategoryWeb(false);
+        }}
+        onCategoryAdd={(newCategory) => {
+          setCustomCategories(prev => [...prev, newCategory]);
+        }}
+        onCategoryEdit={(categoryId, updatedCategory) => {
+          setCustomCategories(prev =>
+            prev.map(cat => cat.id === categoryId ? { ...cat, ...updatedCategory } : cat)
+          );
+        }}
+        position={{ x: 100, y: 150 }}
+      />
+
+      {/* Floating Calendar */}
+      <FloatingCalendar
+        isOpen={showFloatingCalendar}
+        onClose={() => setShowFloatingCalendar(false)}
+        events={communityEvents}
+        onEventAdd={(newEvent) => {
+          setCommunityEvents(prev => [...prev, newEvent]);
+        }}
+        onEventClick={(event) => {
+          console.log('Event clicked:', event);
+          // TODO: Show event details or navigate to event location
+        }}
+        position={{ x: window.innerWidth - 350, y: 100 }}
       />
 
       {boundsWarning && (

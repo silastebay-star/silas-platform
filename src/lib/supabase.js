@@ -25,7 +25,7 @@ export const TABLES = {
 
 // Helper functions for common operations
 export const supabaseHelpers = {
-  // Pin operations
+  // Enhanced pin operations with card support
   async createPin(pinData) {
     const { data, error } = await supabase
       .from(TABLES.PINS)
@@ -36,8 +36,19 @@ export const supabaseHelpers = {
         tags: pinData.tags,
         coordinates: [pinData.coords.lng, pinData.coords.lat],
         created_by: pinData.userId || 'anonymous',
-        status: pinData.metadata?.isIssue ? 'pending' : 'active', // Issues need approval
-        metadata: pinData.metadata || {}
+        status: pinData.metadata?.isIssue ? 'pending' : 'active',
+        metadata: pinData.metadata || {},
+        card_type: pinData.card_type || 'individual',
+        parent_project_id: pinData.parent_project_id || null,
+        display_order: pinData.display_order || 0,
+        card_data: {
+          photos: pinData.metadata?.photos || [],
+          priority: pinData.metadata?.priority || 'normal',
+          tags: pinData.metadata?.tags || [],
+          created_via: pinData.metadata?.quickPin ? 'quick_pin' : 'standard',
+          accuracy: pinData.metadata?.accuracy || null,
+          ...pinData.card_data
+        }
       }])
       .select()
 
@@ -640,5 +651,91 @@ export const supabaseHelpers = {
         recentActivity: 0
       };
     }
+  },
+
+  // Community Events operations
+  async createEvent(eventData) {
+    const { data, error } = await supabase
+      .from('community_events')
+      .insert([{
+        title: eventData.title,
+        description: eventData.description,
+        event_type: eventData.type || 'general',
+        start_datetime: eventData.startTime,
+        end_datetime: eventData.endTime,
+        location_name: eventData.location,
+        location_coordinates: eventData.coordinates ? `(${eventData.coordinates.lng},${eventData.coordinates.lat})` : null,
+        pin_id: eventData.pinId || null,
+        organizer_id: eventData.organizerId || 'anonymous',
+        max_attendees: eventData.maxAttendees || null,
+        tags: eventData.tags || [],
+        metadata: eventData.metadata || {}
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async getEvents(startDate = null, endDate = null) {
+    let query = supabase
+      .from('community_events')
+      .select('*')
+      .order('start_datetime', { ascending: true });
+
+    if (startDate) {
+      query = query.gte('start_datetime', startDate);
+    }
+    if (endDate) {
+      query = query.lte('start_datetime', endDate);
+    }
+
+    const { data, error } = await query;
+    if (error) throw error;
+    return data;
+  },
+
+  // Pin Categories operations
+  async createCategory(categoryData) {
+    const { data, error } = await supabase
+      .from('pin_categories')
+      .insert([{
+        name: categoryData.name,
+        display_name: categoryData.displayName,
+        description: categoryData.description,
+        icon_name: categoryData.iconName,
+        color: categoryData.color,
+        created_by: categoryData.createdBy || 'user',
+        metadata: categoryData.metadata || {}
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
+  },
+
+  async getCategories() {
+    const { data, error } = await supabase
+      .from('pin_categories')
+      .select('*')
+      .eq('is_active', true)
+      .order('display_order', { ascending: true });
+
+    if (error) throw error;
+    return data;
+  },
+
+  async updateCategory(categoryId, updates) {
+    const { data, error } = await supabase
+      .from('pin_categories')
+      .update(updates)
+      .eq('id', categoryId)
+      .select()
+      .single();
+
+    if (error) throw error;
+    return data;
   }
 }
