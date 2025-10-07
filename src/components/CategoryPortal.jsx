@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { X, Search, Filter, SortAsc, Plus, MapPin, Users, MessageCircle, ThumbsUp, Share2 } from 'lucide-react';
 import { SILAS_BRANDING, getCategoryColor, getCategoryGradient } from '../styles/silasBranding.js';
+import { SILAS_CATEGORY_FRAMEWORK } from '../config/categoryFramework.js';
+import CategorySocialFeatures from './CategorySocialFeatures.jsx';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
@@ -67,9 +69,10 @@ const CategoryPortal = ({
 
   if (!isOpen || !category || category === 'All') return null;
 
+  const categoryData = SILAS_CATEGORY_FRAMEWORK[category];
   const categoryColor = getCategoryColor(category);
   const categoryGradient = getCategoryGradient(category);
-  const IconComponent = LAYER_CONFIG[category]?.icon || MapPin;
+  const IconComponent = categoryData?.icon || LAYER_CONFIG[category]?.icon || MapPin;
 
   return (
     <div className="fixed inset-0 z-50 flex">
@@ -110,14 +113,17 @@ const CategoryPortal = ({
                 <IconComponent className="h-8 w-8" />
               </div>
               <div>
-                <h1 
+                <h1
                   className="text-3xl font-bold mb-2"
                   style={{ fontFamily: SILAS_BRANDING.typography.fontFamily.heading }}
                 >
-                  {category} Portal
+                  {categoryData?.name || category} Portal
                 </h1>
-                <p className="text-white/90">
-                  {filteredPins.length} pins • Community hub for {category.toLowerCase()} activities
+                <p className="text-white/90 mb-1">
+                  {categoryData?.description || `Community hub for ${category.toLowerCase()} activities`}
+                </p>
+                <p className="text-white/70 text-sm">
+                  {filteredPins.length} pins • {categoryData?.tone || 'Community-focused'}
                 </p>
               </div>
             </div>
@@ -165,6 +171,19 @@ const CategoryPortal = ({
 
         {/* Content */}
         <div className="flex-1 overflow-hidden">
+          {/* Category Social Features */}
+          <div className="p-6 border-b" style={{ borderColor: `${categoryColor}20` }}>
+            <CategorySocialFeatures
+              category={category}
+              pin={selectedPin}
+              onFeatureAction={(action, data) => {
+                console.log('Category feature action:', action, data);
+                // Handle category-specific actions
+              }}
+              userRole="member"
+            />
+          </div>
+
           {filteredPins.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-96 text-center">
               <IconComponent 
