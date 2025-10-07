@@ -5,7 +5,8 @@
 import {
   Church, Heart, BookOpen, Users, Briefcase, ShoppingCart,
   Hammer, Zap, TreePine, MessageCircle, GraduationCap, Lightbulb,
-  Activity, Leaf, Palette, Music, Camera, Scale, Building, Recycle
+  Activity, Leaf, Palette, Music, Camera, Scale, Building, Recycle,
+  Stethoscope
 } from 'lucide-react';
 
 export const SILAS_CATEGORY_FRAMEWORK = {
