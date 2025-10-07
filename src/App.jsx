@@ -5802,6 +5802,10 @@ export default function SilasPlatform() {
       mapApiRef.current.flyToCoords(item.coords, 16);
     }
     setViewMode("map");
+    if (item.layer) {
+      setActiveLayer(item.layer);
+    }
+  };
 
   const handleMobilePinDrop = (coordinates) => {
     setShowPinCreation({
@@ -5809,10 +5813,6 @@ export default function SilasPlatform() {
       layer: 'Economy' // Default layer for mobile drops
     });
     setMobilePinDropMode(false);
-  };
-    if (item.layer) {
-      setActiveLayer(item.layer);
-    }
   };
 
   const handleRightClick = (lngLat, layer) => {
