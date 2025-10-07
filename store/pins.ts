@@ -18,7 +18,7 @@ export interface Pin {
   created_by?: string
   likes?: number
   comments?: number
-  status: 'active' | 'pending' | 'archived'
+  status: 'active' | 'pending' | 'archived' | 'flagged'
 }
 
 interface PinState {

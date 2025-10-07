@@ -7,6 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import ImageUpload from '@/components/ImageUpload'
 import { CATEGORIES, CategoryKey } from '@/config/categories'
 
 interface AddPinModalProps {
@@ -161,6 +162,22 @@ export default function AddPinModal({ isOpen, onClose, onSubmit, location }: Add
               placeholder="e.g., Restaurant, Park, School..."
               className="mt-1"
             />
+          </div>
+
+          {/* Photos */}
+          <div>
+            <Label>Photos (Optional)</Label>
+            <div className="mt-1">
+              <ImageUpload
+                onImagesChange={(urls) => setFormData(prev => ({ ...prev, photos: urls }))}
+                existingImages={formData.photos}
+                maxImages={5}
+                disabled={isSubmitting}
+              />
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              Add up to 5 photos to help others understand your pin better
+            </p>
           </div>
 
           {/* Photo Upload */}

@@ -19,26 +19,37 @@ module.exports = {
     extend: {
       colors: {
         // SILAS Brand Colors
-        'silas-green': '#4C764C',
+        'silas-green': 'var(--color-primary-500)',
         'silas-dark': '#1C1F1C',
         'silas-light': '#E6F0E6',
         'silas-gray': '#6B7280',
         silas: {
-          green: '#4C764C',
+          green: 'var(--color-primary-500)',
           dark: '#1C1F1C',
           light: '#E6F0E6',
           gray: '#6B7280',
         },
+        // Design System Colors
+        'primary-50': 'var(--color-primary-50)',
+        'primary-100': 'var(--color-primary-100)',
+        'primary-200': 'var(--color-primary-200)',
+        'primary-300': 'var(--color-primary-300)',
+        'primary-400': 'var(--color-primary-400)',
+        'primary-500': 'var(--color-primary-500)',
+        'primary-600': 'var(--color-primary-600)',
+        'primary-700': 'var(--color-primary-700)',
+        'primary-800': 'var(--color-primary-800)',
+        'primary-900': 'var(--color-primary-900)',
+        'primary-950': 'var(--color-primary-950)',
         // Category Colors
         category: {
-          faith: '#8B5CF6',
-          projects: '#F59E0B',
-          economy: '#10B981',
-          environment: '#059669',
-          community: '#EF4444',
-          heritage: '#7C3AED',
-          wellbeing: '#EC4899',
-          governance: '#3B82F6',
+          community: 'var(--color-community)',
+          faith: 'var(--color-faith)',
+          projects: 'var(--color-projects)',
+          economy: 'var(--color-economy)',
+          events: 'var(--color-events)',
+          'data-ai': 'var(--color-data-ai)',
+          issues: 'var(--color-issues)',
         },
         // Shadcn UI Colors
         border: "hsl(var(--border))",
@@ -76,8 +87,9 @@ module.exports = {
         },
       },
       fontFamily: {
-        'sans': ['Inter', 'system-ui', 'sans-serif'],
-        'heading': ['Orbitron', 'monospace'],
+        'sans': 'var(--font-sans)',
+        'heading': 'var(--font-heading)',
+        'mono': 'var(--font-mono)',
       },
       borderRadius: {
         lg: "var(--radius)",

@@ -1,16 +1,18 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { MapPin, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { usePinsStore, type Pin } from '@/store/pins'
 import { getCategoryColor } from '@/config/categories'
-import PinDetail from './PinDetail'
+import PinDrawer from './PinDrawer'
 import AddPinModal from './AddPinModal'
 
 interface MapViewProps {
   filteredPins: Pin[]
+  showAddPinModal?: boolean
+  setShowAddPinModal?: (show: boolean) => void
 }
 
 // Helper: convert pins to GeoJSON FeatureCollection
@@ -39,24 +41,34 @@ function toGeoJSON(pins: Pin[]) {
   } as GeoJSON.FeatureCollection
 }
 
-export default function MapView({ filteredPins }: MapViewProps) {
+export default function MapView({ filteredPins, showAddPinModal = false, setShowAddPinModal }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
   const mapRef = useRef<any>(null)
   const mapboxRef = useRef<any>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
-  const [showAddModal, setShowAddModal] = useState(false)
-  const [newPinLocation, setNewPinLocation] = useState<{ lat: number; lng: number } | null>(null)
-  const [showPinDetail, setShowPinDetail] = useState(false)
 
-  const { 
-    selectedPin, 
-    setSelectedPin, 
-    addPin, 
-    fetchPins, 
-    isLoading, 
+  const [newPinLocation, setNewPinLocation] = useState<{ lat: number; lng: number } | null>(null)
+  const [showPinDrawer, setShowPinDrawer] = useState(false)
+
+  const {
+    selectedPin,
+    setSelectedPin,
+    addPin,
+    fetchPins,
+    isLoading,
     error,
     pins,
   } = usePinsStore()
+
+  // Memoize GeoJSON conversion to prevent unnecessary recalculations
+  const geoJsonData = useMemo(() => toGeoJSON(filteredPins), [filteredPins])
+
+  // Memoize pin lookup for performance
+  const pinLookup = useMemo(() => {
+    const lookup = new Map()
+    pins.forEach(pin => lookup.set(pin.id, pin))
+    return lookup
+  }, [pins])
 
   // Initialize map via dynamic import for smaller initial bundle
   useEffect(() => {
@@ -94,10 +106,31 @@ export default function MapView({ filteredPins }: MapViewProps) {
         if (!mapRef.current.getSource('pins')) {
           mapRef.current.addSource('pins', {
             type: 'geojson',
-            data: toGeoJSON(filteredPins),
+            data: geoJsonData,
             cluster: true,
             clusterMaxZoom: 14,
             clusterRadius: 60,
+            clusterProperties: {
+              // Calculate dominant category in each cluster
+              'dominant_category': [
+                'case',
+                ['>', ['get', 'community_count'], ['get', 'faith_count']], 'community',
+                ['>', ['get', 'faith_count'], ['get', 'projects_count']], 'faith',
+                ['>', ['get', 'projects_count'], ['get', 'economy_count']], 'projects',
+                ['>', ['get', 'economy_count'], ['get', 'events_count']], 'economy',
+                ['>', ['get', 'events_count'], ['get', 'data_ai_count']], 'events',
+                ['>', ['get', 'data_ai_count'], ['get', 'issues_count']], 'data_ai',
+                'issues' // fallback
+              ],
+              // Count pins by category in each cluster
+              'community_count': ['+', ['case', ['==', ['get', 'type'], 'community'], 1, 0]],
+              'faith_count': ['+', ['case', ['==', ['get', 'type'], 'faith'], 1, 0]],
+              'projects_count': ['+', ['case', ['==', ['get', 'type'], 'projects'], 1, 0]],
+              'economy_count': ['+', ['case', ['==', ['get', 'type'], 'economy'], 1, 0]],
+              'events_count': ['+', ['case', ['==', ['get', 'type'], 'events'], 1, 0]],
+              'data_ai_count': ['+', ['case', ['==', ['get', 'type'], 'data_ai'], 1, 0]],
+              'issues_count': ['+', ['case', ['==', ['get', 'type'], 'issues'], 1, 0]]
+            }
           })
         }
 
@@ -109,8 +142,23 @@ export default function MapView({ filteredPins }: MapViewProps) {
             source: 'pins',
             filter: ['has', 'point_count'],
             paint: {
-              // Use SILAS green with stepped radius by count
-              'circle-color': '#4C764C',
+              // Category-aware cluster colors with fallback to SILAS green
+              'circle-color': [
+                'case',
+                ['has', 'dominant_category'],
+                [
+                  'case',
+                  ['==', ['get', 'dominant_category'], 'community'], '#6B8E6B',
+                  ['==', ['get', 'dominant_category'], 'faith'], '#3A5D3A',
+                  ['==', ['get', 'dominant_category'], 'projects'], '#4C764C',
+                  ['==', ['get', 'dominant_category'], 'economy'], '#4C6F76',
+                  ['==', ['get', 'dominant_category'], 'events'], '#8CBFA5',
+                  ['==', ['get', 'dominant_category'], 'data_ai'], '#5E6E6E',
+                  ['==', ['get', 'dominant_category'], 'issues'], '#C97340',
+                  '#4C764C' // fallback to SILAS green
+                ],
+                '#4C764C' // fallback when no dominant_category
+              ],
               'circle-radius': [
                 'step',
                 ['get', 'point_count'],
@@ -121,6 +169,7 @@ export default function MapView({ filteredPins }: MapViewProps) {
               ],
               'circle-stroke-width': 2,
               'circle-stroke-color': '#FFF',
+              'circle-opacity': 0.8,
             },
           })
         }
@@ -152,9 +201,25 @@ export default function MapView({ filteredPins }: MapViewProps) {
             filter: ['!', ['has', 'point_count']],
             paint: {
               'circle-color': ['get', 'color'],
-              'circle-radius': 7,
-              'circle-stroke-width': 2,
+              'circle-radius': [
+                'case',
+                ['boolean', ['feature-state', 'hover'], false],
+                9, // larger radius on hover
+                7  // normal radius
+              ],
+              'circle-stroke-width': [
+                'case',
+                ['boolean', ['feature-state', 'hover'], false],
+                3, // thicker stroke on hover
+                2  // normal stroke
+              ],
               'circle-stroke-color': '#FFF',
+              'circle-opacity': [
+                'case',
+                ['boolean', ['feature-state', 'hover'], false],
+                1.0, // full opacity on hover
+                0.8  // slightly transparent normally
+              ],
             },
           })
         }
@@ -163,7 +228,7 @@ export default function MapView({ filteredPins }: MapViewProps) {
         mapRef.current.on('contextmenu', (e: any) => {
           e.preventDefault()
           setNewPinLocation({ lat: e.lngLat.lat, lng: e.lngLat.lng })
-          setShowAddModal(true)
+          setShowAddPinModal?.(true)
         })
 
         // Interactions: click cluster to zoom in
@@ -182,25 +247,90 @@ export default function MapView({ filteredPins }: MapViewProps) {
           const feature = e.features && e.features[0]
           if (!feature) return
           const pinId = feature.properties?.id as string
-          const pin = (pins || []).find((p) => p.id === pinId)
+          const pin = pinLookup.get(pinId)
           if (pin) {
             setSelectedPin(pin)
-            setShowPinDetail(true)
+            setShowPinDrawer(true)
           }
         })
 
-        // Cursor feedback
+        // Hover effects and cursor feedback
+        let hoveredPinId: string | null = null
+
+        // Cluster hover effects
         mapRef.current.on('mouseenter', 'clusters', () => {
           mapRef.current.getCanvas().style.cursor = 'pointer'
         })
         mapRef.current.on('mouseleave', 'clusters', () => {
           mapRef.current.getCanvas().style.cursor = ''
         })
-        mapRef.current.on('mouseenter', 'unclustered-point', () => {
+
+        // Pin hover effects with feature-state
+        mapRef.current.on('mouseenter', 'unclustered-point', (e: any) => {
           mapRef.current.getCanvas().style.cursor = 'pointer'
+
+          if (e.features.length > 0) {
+            const feature = e.features[0]
+            const pinId = feature.properties?.id
+
+            if (hoveredPinId !== null) {
+              mapRef.current.setFeatureState(
+                { source: 'pins', id: hoveredPinId },
+                { hover: false }
+              )
+            }
+
+            hoveredPinId = pinId
+            mapRef.current.setFeatureState(
+              { source: 'pins', id: pinId },
+              { hover: true }
+            )
+
+            // Create lightweight hover popup
+            const coordinates = feature.geometry.coordinates.slice()
+            const { title, type } = feature.properties
+
+            // Ensure popup appears above the point
+            while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+              coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360
+            }
+
+            const popup = new mapboxRef.current.Popup({
+              closeButton: false,
+              closeOnClick: false,
+              className: 'pin-hover-popup',
+              offset: [0, -10]
+            })
+              .setLngLat(coordinates)
+              .setHTML(`
+                <div class="p-2 text-sm">
+                  <div class="font-medium text-gray-900">${title}</div>
+                  <div class="text-xs text-gray-500 capitalize">${type.replace('_', ' ')}</div>
+                </div>
+              `)
+              .addTo(mapRef.current)
+
+            // Store popup reference for cleanup
+            mapRef.current._hoverPopup = popup
+          }
         })
+
         mapRef.current.on('mouseleave', 'unclustered-point', () => {
           mapRef.current.getCanvas().style.cursor = ''
+
+          if (hoveredPinId !== null) {
+            mapRef.current.setFeatureState(
+              { source: 'pins', id: hoveredPinId },
+              { hover: false }
+            )
+            hoveredPinId = null
+          }
+
+          // Remove hover popup
+          if (mapRef.current._hoverPopup) {
+            mapRef.current._hoverPopup.remove()
+            mapRef.current._hoverPopup = null
+          }
         })
 
         // Navigation controls
@@ -238,9 +368,9 @@ export default function MapView({ filteredPins }: MapViewProps) {
     if (!mapRef.current || !mapLoaded) return
     const source: any = mapRef.current.getSource('pins')
     if (source) {
-      source.setData(toGeoJSON(filteredPins))
+      source.setData(geoJsonData)
     }
-  }, [filteredPins, mapLoaded])
+  }, [geoJsonData, mapLoaded])
 
   // Keyboard shortcut: 'A' to add a pin at map center
   useEffect(() => {
@@ -249,7 +379,7 @@ export default function MapView({ filteredPins }: MapViewProps) {
       if (e.key.toLowerCase() === 'a') {
         const center = mapRef.current.getCenter()
         setNewPinLocation({ lat: center.lat, lng: center.lng })
-        setShowAddModal(true)
+        setShowAddPinModal?.(true)
       }
     }
     window.addEventListener('keydown', handleKey)
@@ -267,7 +397,7 @@ export default function MapView({ filteredPins }: MapViewProps) {
     })
 
     if (newPin) {
-      setShowAddModal(false)
+      setShowAddPinModal?.(false)
       setNewPinLocation(null)
     }
   }
@@ -329,24 +459,27 @@ export default function MapView({ filteredPins }: MapViewProps) {
       </div>
 
       {/* Add Pin Modal */}
-      <AddPinModal
-        isOpen={showAddModal}
-        onClose={() => {
-          setShowAddModal(false)
-          setNewPinLocation(null)
-        }}
-        onSubmit={handleAddPin}
-        location={newPinLocation}
-      />
-
-      {/* Pin Detail Modal */}
-      {selectedPin && (
-        <PinDetail
-          pin={selectedPin}
-          isOpen={showPinDetail}
-          onClose={() => setShowPinDetail(false)}
+      {setShowAddPinModal && (
+        <AddPinModal
+          isOpen={showAddPinModal}
+          onClose={() => {
+            setShowAddPinModal(false)
+            setNewPinLocation(null)
+          }}
+          onSubmit={handleAddPin}
+          location={newPinLocation}
         />
       )}
+
+      {/* Pin Drawer */}
+      <PinDrawer
+        pin={selectedPin}
+        isOpen={showPinDrawer}
+        onClose={() => {
+          setShowPinDrawer(false)
+          setSelectedPin(null)
+        }}
+      />
     </div>
   )
 }
