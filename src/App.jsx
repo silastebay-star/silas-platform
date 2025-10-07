@@ -25,6 +25,7 @@ import SilasHeader from './components/SilasHeader.jsx';
 import CategoryPortal from './components/CategoryPortal.jsx';
 import SilasPinDetail from './components/SilasPinDetail.jsx';
 import EnhancedPinCreation from './components/EnhancedPinCreation.jsx';
+import SilasAICopilot from './components/AI/SilasAICopilot.jsx';
 import { DragDropProvider, useDragDrop } from './contexts/DragDropContext.jsx';
 import { SILAS_BRANDING } from './styles/silasBranding.js';
 import { SAMPLE_PINS } from './data/samplePinsData.js';
@@ -5623,6 +5624,7 @@ export default function SilasPlatform() {
   const [showPinCreation, setShowPinCreation] = useState(null);
   const [showDataInspector, setShowDataInspector] = useState(null);
   const [showCopilot, setShowCopilot] = useState(null);
+  const [showAICopilot, setShowAICopilot] = useState(false);
   const [showBulkPinModal, setShowBulkPinModal] = useState(false);
   const [bulkPinCenter, setBulkPinCenter] = useState(null);
   const [showQuickPin, setShowQuickPin] = useState(false);
@@ -6543,6 +6545,14 @@ export default function SilasPlatform() {
       >
         SILAS • Stoneclough Initiative for Local & Autonomous Systems
       </footer>
+
+      {/* SILAS AI Copilot */}
+      <SilasAICopilot
+        currentPin={selectedPinDetail}
+        currentCategory={activeLayer !== 'All' ? activeLayer : null}
+        isOpen={showAICopilot}
+        onToggle={() => setShowAICopilot(!showAICopilot)}
+      />
     </div>
     </DragDropProvider>
   );
