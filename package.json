@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test:production": "node test-production.js",
     "verify:build": "node verify-build.js",
-    "verify:production": "node verify-production.js"
+    "verify:production": "node verify-production.js",
+    "verify:mobile": "node verify-mobile-features.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.0.1",
