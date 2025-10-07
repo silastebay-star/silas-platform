@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { X, MapPin, Camera, Navigation } from 'lucide-react';
+import { X, MapPin, Camera, Navigation, Image as ImageIcon, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
+import MobilePhotoUpload from './MobilePhotoUpload.jsx';
+import { useMobileLocation } from '../hooks/useMobileLocation.js';
 
 const QuickPinModal = ({ isOpen, onClose, onSubmit }) => {
   const [quickData, setQuickData] = useState({
@@ -11,48 +13,66 @@ const QuickPinModal = ({ isOpen, onClose, onSubmit }) => {
     category: 'Economy',
     priority: 'normal',
     useCurrentLocation: true,
-    coordinates: null
+    coordinates: null,
+    photos: []
   });
-  const [isGettingLocation, setIsGettingLocation] = useState(false);
-  const [locationError, setLocationError] = useState(null);
+  const [showPhotoUpload, setShowPhotoUpload] = useState(false);
+
+  // Use mobile location hook
+  const {
+    location,
+    error: locationError,
+    isLoading: isGettingLocation,
+    accuracy,
+    getCurrentLocation,
+    requestPermission,
+    permissionStatus,
+    getAccuracyLevel
+  } = useMobileLocation();
 
   // Get current location when modal opens
   useEffect(() => {
     if (isOpen && quickData.useCurrentLocation && !quickData.coordinates) {
-      getCurrentLocation();
+      handleGetLocation();
     }
   }, [isOpen]);
 
-  const getCurrentLocation = () => {
-    if (!navigator.geolocation) {
-      setLocationError('Geolocation is not supported by this browser');
-      return;
+  // Update coordinates when location changes
+  useEffect(() => {
+    if (location && quickData.useCurrentLocation) {
+      setQuickData(prev => ({
+        ...prev,
+        coordinates: {
+          lat: location.latitude,
+          lng: location.longitude
+        }
+      }));
     }
+  }, [location, quickData.useCurrentLocation]);
 
-    setIsGettingLocation(true);
-    setLocationError(null);
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setQuickData(prev => ({
-          ...prev,
-          coordinates: {
-            lat: position.coords.latitude,
-            lng: position.coords.longitude
-          }
-        }));
-        setIsGettingLocation(false);
-      },
-      (error) => {
-        setLocationError('Unable to get your location. Please enable location services.');
-        setIsGettingLocation(false);
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 60000
+  const handleGetLocation = async () => {
+    try {
+      if (permissionStatus === 'denied') {
+        setLocationError('Location access denied. Please enable in browser settings.');
+        return;
       }
-    );
+
+      await getCurrentLocation({
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 30000
+      });
+    } catch (error) {
+      console.error('Error getting location:', error);
+    }
+  };
+
+  const handlePhotoUpload = (photos) => {
+    setQuickData(prev => ({
+      ...prev,
+      photos: photos
+    }));
+    setShowPhotoUpload(false);
   };
 
   const handleSubmit = () => {
@@ -72,6 +92,9 @@ const QuickPinModal = ({ isOpen, onClose, onSubmit }) => {
       metadata: {
         quickPin: true,
         priority: quickData.priority,
+        photos: quickData.photos,
+        accuracy: accuracy,
+        accuracyLevel: getAccuracyLevel(),
         createdAt: new Date().toISOString()
       }
     });
@@ -83,7 +106,8 @@ const QuickPinModal = ({ isOpen, onClose, onSubmit }) => {
       category: 'Economy',
       priority: 'normal',
       useCurrentLocation: true,
-      coordinates: null
+      coordinates: null,
+      photos: []
     });
   };
 
@@ -181,28 +205,33 @@ const QuickPinModal = ({ isOpen, onClose, onSubmit }) => {
                 <div className="bg-gray-50 p-3 rounded-md">
                   {isGettingLocation && (
                     <div className="flex items-center space-x-2 text-sm text-gray-600">
-                      <Navigation className="h-4 w-4 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                       <span>Getting your location...</span>
                     </div>
                   )}
-                  
+
                   {locationError && (
                     <div className="text-sm text-red-600">
                       {locationError}
                       <Button
                         variant="link"
                         size="sm"
-                        onClick={getCurrentLocation}
+                        onClick={handleGetLocation}
                         className="p-0 h-auto ml-2"
                       >
                         Try again
                       </Button>
                     </div>
                   )}
-                  
+
                   {quickData.coordinates && !isGettingLocation && (
                     <div className="text-sm text-green-600">
                       ✓ Location acquired ({quickData.coordinates.lat.toFixed(6)}, {quickData.coordinates.lng.toFixed(6)})
+                      {accuracy && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          Accuracy: {Math.round(accuracy)}m ({getAccuracyLevel()})
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
@@ -210,19 +239,35 @@ const QuickPinModal = ({ isOpen, onClose, onSubmit }) => {
             </div>
           </div>
 
-          {/* Photo placeholder */}
+          {/* Photo Upload */}
           <div>
             <Button
               variant="outline"
               className="w-full"
-              onClick={() => {
-                // TODO: Implement photo capture
-                alert('Photo capture coming soon!');
-              }}
+              onClick={() => setShowPhotoUpload(true)}
             >
               <Camera className="h-4 w-4 mr-2" />
-              Add Photo (Coming Soon)
+              Add Photos {quickData.photos.length > 0 && `(${quickData.photos.length})`}
             </Button>
+
+            {quickData.photos.length > 0 && (
+              <div className="mt-2 flex space-x-2 overflow-x-auto">
+                {quickData.photos.slice(0, 3).map((photo, index) => (
+                  <div key={index} className="flex-shrink-0 w-12 h-12 rounded-md overflow-hidden bg-gray-100">
+                    <img
+                      src={photo.url}
+                      alt={`Photo ${index + 1}`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                ))}
+                {quickData.photos.length > 3 && (
+                  <div className="flex-shrink-0 w-12 h-12 rounded-md bg-gray-100 flex items-center justify-center text-xs text-gray-500">
+                    +{quickData.photos.length - 3}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Actions */}
@@ -241,6 +286,15 @@ const QuickPinModal = ({ isOpen, onClose, onSubmit }) => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Mobile Photo Upload Modal */}
+      <MobilePhotoUpload
+        isOpen={showPhotoUpload}
+        onCancel={() => setShowPhotoUpload(false)}
+        onPhotoUpload={handlePhotoUpload}
+        maxPhotos={5}
+        existingPhotos={quickData.photos}
+      />
     </div>
   );
 };

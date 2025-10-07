@@ -142,7 +142,11 @@ const SocialPanel = ({ pins, activeLayer, onItemClick, onClose, isVisible }) => 
   if (!isVisible) return null;
 
   return (
-    <div className="fixed right-0 top-0 h-full w-96 bg-white shadow-2xl z-40 flex flex-col border-l border-gray-200">
+    <div className={`fixed top-0 h-full bg-white shadow-2xl z-40 flex flex-col border-l border-gray-200 transition-transform duration-300 ${
+      window.innerWidth <= 768
+        ? 'right-0 w-full'
+        : 'right-0 w-96'
+    }`}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
         <div className="flex items-center space-x-2">
