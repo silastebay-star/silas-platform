@@ -27,6 +27,8 @@ import SilasPinDetail from './components/SilasPinDetail.jsx';
 import EnhancedPinCreation from './components/EnhancedPinCreation.jsx';
 import { DragDropProvider, useDragDrop } from './contexts/DragDropContext.jsx';
 import { SILAS_BRANDING } from './styles/silasBranding.js';
+import { SAMPLE_PINS } from './data/samplePinsData.js';
+import { getCommentsForPin } from './data/sampleCommentsData.js';
 import { useMobileLocation } from './hooks/useMobileLocation.js';
 import { Progress } from '@/components/ui/progress.jsx';
 import silasLogo from './assets/silas-logo.png';
@@ -5649,8 +5651,22 @@ export default function SilasPlatform() {
       read: false
     }
   ]);
-  const [mapData, setMapData] = useState({ type: "FeatureCollection", features: [] });
-  const [socialFeedPins, setSocialFeedPins] = useState([]);
+  const [mapData, setMapData] = useState({
+    type: "FeatureCollection",
+    features: SAMPLE_PINS.map(pin => ({
+      type: "Feature",
+      id: pin.id,
+      geometry: {
+        type: "Point",
+        coordinates: pin.coordinates
+      },
+      properties: {
+        ...pin,
+        category: pin.layer
+      }
+    }))
+  });
+  const [socialFeedPins, setSocialFeedPins] = useState(SAMPLE_PINS);
 
   // Mobile detection
   useEffect(() => {
@@ -5881,7 +5897,8 @@ export default function SilasPlatform() {
 
   const loadPinComments = async (pinId) => {
     try {
-      const comments = await supabaseHelpers.getCommentsByPin(pinId);
+      // Use sample data for now, replace with supabase call later
+      const comments = getCommentsForPin(pinId);
       setPinComments(comments);
     } catch (error) {
       console.error('Error loading comments:', error);
