@@ -1,18 +1,78 @@
 // SILAS Sample Pins Data - Comprehensive colorful pins for all categories
 import { SILAS_CATEGORY_FRAMEWORK } from '../config/categoryFramework.js';
 
-// Stoneclough coordinates (approximate center)
-const STONECLOUGH_CENTER = [-2.4833, 53.5500];
-const RADIUS = 0.01; // Roughly 1km radius
+// Real Stoneclough coordinates and boundaries
+// Stoneclough is a village in Greater Manchester, England
+const STONECLOUGH_CENTER = [-2.3769, 53.5526]; // Actual Stoneclough center
+const STONECLOUGH_BOUNDS = {
+  north: 53.5580,
+  south: 53.5470,
+  east: -2.3700,
+  west: -2.3850
+};
 
-// Generate random coordinates around Stoneclough
-const generateRandomCoords = () => {
-  const angle = Math.random() * 2 * Math.PI;
-  const distance = Math.random() * RADIUS;
-  return [
-    STONECLOUGH_CENTER[0] + Math.cos(angle) * distance,
-    STONECLOUGH_CENTER[1] + Math.sin(angle) * distance
-  ];
+// Real Stoneclough locations for authentic pin placement
+const STONECLOUGH_LOCATIONS = {
+  // Main village center and key areas
+  villageCenter: [-2.3769, 53.5526],
+  churchArea: [-2.3775, 53.5535],
+  schoolArea: [-2.3760, 53.5520],
+  shopArea: [-2.3765, 53.5525],
+  parkArea: [-2.3780, 53.5530],
+  communityCenter: [-2.3770, 53.5528],
+  libraryArea: [-2.3762, 53.5522],
+  healthCenter: [-2.3773, 53.5524],
+
+  // Residential areas
+  northResidential: [-2.3755, 53.5540],
+  southResidential: [-2.3785, 53.5515],
+  eastResidential: [-2.3745, 53.5525],
+  westResidential: [-2.3795, 53.5530],
+
+  // Green spaces and community areas
+  greenSpace1: [-2.3790, 53.5535],
+  greenSpace2: [-2.3750, 53.5515],
+  sportsGround: [-2.3785, 53.5540],
+  allotments: [-2.3800, 53.5525],
+
+  // Infrastructure locations
+  energyProject: [-2.3775, 53.5545],
+  recyclingCenter: [-2.3795, 53.5520],
+  repairCafe: [-2.3765, 53.5535]
+};
+
+// Generate coordinates within Stoneclough boundaries
+const getRandomStonecloughCoords = () => {
+  const locations = Object.values(STONECLOUGH_LOCATIONS);
+  return locations[Math.floor(Math.random() * locations.length)];
+};
+
+// Get specific location for pin type
+const getLocationForPinType = (pinType, category) => {
+  switch (pinType) {
+    case 'Churches':
+      return STONECLOUGH_LOCATIONS.churchArea;
+    case 'Community Centers':
+      return STONECLOUGH_LOCATIONS.communityCenter;
+    case 'Libraries':
+      return STONECLOUGH_LOCATIONS.libraryArea;
+    case 'Health Clinics':
+      return STONECLOUGH_LOCATIONS.healthCenter;
+    case 'Local Shops':
+    case 'Farmers Markets':
+      return STONECLOUGH_LOCATIONS.shopArea;
+    case 'Solar Installations':
+      return STONECLOUGH_LOCATIONS.energyProject;
+    case 'Community Gardens':
+      return STONECLOUGH_LOCATIONS.allotments;
+    case 'Repair Cafes':
+      return STONECLOUGH_LOCATIONS.repairCafe;
+    case 'Parks & Playgrounds':
+    case 'Fitness Centers':
+      return STONECLOUGH_LOCATIONS.parkArea;
+    default:
+      return getRandomStonecloughCoords();
+  }
 };
 
 // Sample photos for different categories
@@ -43,7 +103,7 @@ const samplePhotos = {
   ]
 };
 
-// Generate comprehensive sample pins
+// Generate comprehensive sample pins with real Stoneclough locations
 export const generateSamplePins = () => {
   const pins = [];
   let pinId = 1;
@@ -57,7 +117,7 @@ export const generateSamplePins = () => {
       layer: 'faith',
       subcategory: 'parishLife',
       pinType: 'Churches',
-      coordinates: generateRandomCoords(),
+      coordinates: getLocationForPinType('Churches', 'faith'),
       created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
       created_by: 'Father Michael',
       priority: 'normal',
@@ -82,7 +142,7 @@ export const generateSamplePins = () => {
       layer: 'faith',
       subcategory: 'scriptureStudy',
       pinType: 'Study Circles',
-      coordinates: generateRandomCoords(),
+      coordinates: STONECLOUGH_LOCATIONS.communityCenter,
       created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
       created_by: 'Sarah Thompson',
       priority: 'normal',
@@ -102,7 +162,7 @@ export const generateSamplePins = () => {
       layer: 'faith',
       subcategory: 'outreach',
       pinType: 'Charity Efforts',
-      coordinates: generateRandomCoords(),
+      coordinates: STONECLOUGH_LOCATIONS.communityCenter,
       created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
       created_by: 'Community Volunteers',
       priority: 'high',
@@ -126,7 +186,7 @@ export const generateSamplePins = () => {
       layer: 'commerce',
       subcategory: 'marketplace',
       pinType: 'Farmers Markets',
-      coordinates: generateRandomCoords(),
+      coordinates: getLocationForPinType('Farmers Markets', 'commerce'),
       created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
       created_by: 'Market Coordinator',
       priority: 'normal',
@@ -147,7 +207,7 @@ export const generateSamplePins = () => {
       layer: 'commerce',
       subcategory: 'localBusiness',
       pinType: 'Local Shops',
-      coordinates: generateRandomCoords(),
+      coordinates: getLocationForPinType('Local Shops', 'commerce'),
       created_at: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(),
       created_by: 'Emma Baker',
       priority: 'normal',
@@ -168,7 +228,7 @@ export const generateSamplePins = () => {
       layer: 'commerce',
       subcategory: 'cooperatives',
       pinType: 'Artisan Studios',
-      coordinates: generateRandomCoords(),
+      coordinates: STONECLOUGH_LOCATIONS.shopArea,
       created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
       created_by: 'Craft Collective',
       priority: 'normal',
@@ -192,7 +252,7 @@ export const generateSamplePins = () => {
       layer: 'works',
       subcategory: 'energy',
       pinType: 'Solar Installations',
-      coordinates: generateRandomCoords(),
+      coordinates: getLocationForPinType('Solar Installations', 'works'),
       created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
       created_by: 'Green Energy Team',
       priority: 'high',
@@ -213,7 +273,7 @@ export const generateSamplePins = () => {
       layer: 'works',
       subcategory: 'environment',
       pinType: 'Community Gardens',
-      coordinates: generateRandomCoords(),
+      coordinates: getLocationForPinType('Community Gardens', 'works'),
       created_at: new Date(Date.now() - 6 * 24 * 60 * 60 * 1000).toISOString(),
       created_by: 'Garden Committee',
       priority: 'normal',
@@ -233,7 +293,7 @@ export const generateSamplePins = () => {
       layer: 'works',
       subcategory: 'environment',
       pinType: 'Repair Cafes',
-      coordinates: generateRandomCoords(),
+      coordinates: getLocationForPinType('Repair Cafes', 'works'),
       created_at: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
       created_by: 'Repair Volunteers',
       priority: 'normal',
@@ -257,7 +317,7 @@ export const generateSamplePins = () => {
       layer: 'circle',
       subcategory: 'socialEvents',
       pinType: 'Community Centers',
-      coordinates: generateRandomCoords(),
+      coordinates: getLocationForPinType('Community Centers', 'circle'),
       created_at: new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString(),
       created_by: 'Community Manager',
       priority: 'normal',
@@ -277,7 +337,7 @@ export const generateSamplePins = () => {
       layer: 'circle',
       subcategory: 'culturalLife',
       pinType: 'Community Centers',
-      coordinates: generateRandomCoords(),
+      coordinates: STONECLOUGH_LOCATIONS.parkArea,
       created_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
       created_by: 'Festival Committee',
       priority: 'high',
@@ -301,7 +361,7 @@ export const generateSamplePins = () => {
       layer: 'mind',
       subcategory: 'libraries',
       pinType: 'Libraries',
-      coordinates: generateRandomCoords(),
+      coordinates: getLocationForPinType('Libraries', 'mind'),
       created_at: new Date(Date.now() - 9 * 24 * 60 * 60 * 1000).toISOString(),
       created_by: 'Head Librarian',
       priority: 'normal',
@@ -321,7 +381,7 @@ export const generateSamplePins = () => {
       layer: 'mind',
       subcategory: 'workshops',
       pinType: 'Skill Workshops',
-      coordinates: generateRandomCoords(),
+      coordinates: STONECLOUGH_LOCATIONS.libraryArea,
       created_at: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000).toISOString(),
       created_by: 'Tech Volunteers',
       priority: 'normal',
@@ -345,7 +405,7 @@ export const generateSamplePins = () => {
       layer: 'pulse',
       subcategory: 'healthcare',
       pinType: 'Health Clinics',
-      coordinates: generateRandomCoords(),
+      coordinates: getLocationForPinType('Health Clinics', 'pulse'),
       created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
       created_by: 'Dr. Sarah Wilson',
       priority: 'normal',
@@ -365,7 +425,7 @@ export const generateSamplePins = () => {
       layer: 'pulse',
       subcategory: 'fitness',
       pinType: 'Fitness Centers',
-      coordinates: generateRandomCoords(),
+      coordinates: getLocationForPinType('Fitness Centers', 'pulse'),
       created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
       created_by: 'Yoga Instructor Lisa',
       priority: 'normal',
