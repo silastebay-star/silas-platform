@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { supabaseHelpers } from '../lib/supabase.js';
+import { SILAS_BRANDING, getCategoryColor, getCategoryGradient } from '../styles/silasBranding.js';
+import silasLogo from '../assets/silas-logo.png';
 
 const SocialPanel = ({ pins, activeLayer, onItemClick, onClose, isVisible }) => {
   const [activeTab, setActiveTab] = useState('feed');
