@@ -21,7 +21,11 @@ import PinCard from './components/PinCard.jsx';
 import DraggableFloatingButton from './components/DraggableFloatingButton.jsx';
 import DraggablePanel from './components/DraggablePanel.jsx';
 import CustomizationToolbar from './components/CustomizationToolbar.jsx';
+import SilasHeader from './components/SilasHeader.jsx';
+import CategoryPortal from './components/CategoryPortal.jsx';
+import SilasPinDetail from './components/SilasPinDetail.jsx';
 import { DragDropProvider, useDragDrop } from './contexts/DragDropContext.jsx';
+import { SILAS_BRANDING } from './styles/silasBranding.js';
 import { useMobileLocation } from './hooks/useMobileLocation.js';
 import { Progress } from '@/components/ui/progress.jsx';
 import silasLogo from './assets/silas-logo.png';
@@ -5618,6 +5622,12 @@ export default function SilasPlatform() {
   const [showFloatingCalendar, setShowFloatingCalendar] = useState(false);
   const [customCategories, setCustomCategories] = useState([]);
   const [communityEvents, setCommunityEvents] = useState([]);
+  const [showCategoryNav, setShowCategoryNav] = useState(false);
+  const [showCategoryPortal, setShowCategoryPortal] = useState(false);
+  const [selectedCategoryPortal, setSelectedCategoryPortal] = useState(null);
+  const [selectedPinDetail, setSelectedPinDetail] = useState(null);
+  const [showPinDetail, setShowPinDetail] = useState(false);
+  const [pinComments, setPinComments] = useState([]);
   const [notifications, setNotifications] = useState([
     {
       id: 1,
@@ -5826,6 +5836,58 @@ export default function SilasPlatform() {
     setMobilePinDropMode(false);
   };
 
+  const handleCategoryPortalOpen = (category) => {
+    setSelectedCategoryPortal(category);
+    setShowCategoryPortal(true);
+  };
+
+  const handlePinDetailOpen = (pin) => {
+    setSelectedPinDetail(pin);
+    setShowPinDetail(true);
+    // Load comments for this pin
+    loadPinComments(pin.id);
+  };
+
+  const handlePinReaction = async (pinId, reactionType) => {
+    try {
+      await supabaseHelpers.addReaction(pinId, reactionType, 'anonymous');
+      // Reload data to reflect changes
+      loadAllData();
+    } catch (error) {
+      console.error('Error adding reaction:', error);
+    }
+  };
+
+  const handlePinComment = async (pinId, commentText) => {
+    try {
+      await supabaseHelpers.addComment(pinId, commentText, 'anonymous');
+      // Reload comments
+      loadPinComments(pinId);
+    } catch (error) {
+      console.error('Error adding comment:', error);
+    }
+  };
+
+  const handlePinShare = async (pinId, platform = 'internal') => {
+    try {
+      await supabaseHelpers.sharePin(pinId, platform, 'anonymous');
+      // Show success message
+      console.log(`Pin shared to ${platform}`);
+    } catch (error) {
+      console.error('Error sharing pin:', error);
+    }
+  };
+
+  const loadPinComments = async (pinId) => {
+    try {
+      const comments = await supabaseHelpers.getCommentsByPin(pinId);
+      setPinComments(comments);
+    } catch (error) {
+      console.error('Error loading comments:', error);
+      setPinComments([]);
+    }
+  };
+
   const handleRightClick = (lngLat, layer) => {
     setShowPinCreation({ lngLat, layer });
   };
@@ -5991,6 +6053,16 @@ export default function SilasPlatform() {
       </div>
 
       {/* UI Components */}
+      {/* SILAS Branded Header */}
+      <SilasHeader
+        activeLayer={activeLayer}
+        onLayerChange={setActiveLayer}
+        LAYER_CONFIG={LAYER_CONFIG}
+        onCategoryPortalOpen={handleCategoryPortalOpen}
+        showCategoryNav={showCategoryNav}
+        setShowCategoryNav={setShowCategoryNav}
+      />
+
       {/* Draggable Floating Buttons */}
       <DraggableFloatingButtonsContainer
         showCategoryWeb={showCategoryWeb}
@@ -6376,10 +6448,41 @@ export default function SilasPlatform() {
         </div>
       )}
 
+      {/* Category Portal */}
+      <CategoryPortal
+        category={selectedCategoryPortal}
+        isOpen={showCategoryPortal}
+        onClose={() => setShowCategoryPortal(false)}
+        pins={socialFeedPins}
+        onPinClick={handlePinDetailOpen}
+        onPinInteraction={handlePinReaction}
+        LAYER_CONFIG={LAYER_CONFIG}
+      />
+
+      {/* Pin Detail Modal */}
+      <SilasPinDetail
+        pin={selectedPinDetail}
+        isOpen={showPinDetail}
+        onClose={() => setShowPinDetail(false)}
+        onReaction={handlePinReaction}
+        onComment={handlePinComment}
+        onShare={handlePinShare}
+        comments={pinComments}
+        LAYER_CONFIG={LAYER_CONFIG}
+      />
+
       {/* Customization Toolbar */}
       <CustomizationToolbar />
 
-      <footer className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 text-xs text-gray-600 bg-white/80 backdrop-blur-sm px-6 py-2 rounded-full shadow-md">
+      <footer
+        className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 text-xs px-6 py-2 rounded-full shadow-md"
+        style={{
+          color: SILAS_BRANDING.colors.gray[600],
+          background: SILAS_BRANDING.components.card.background,
+          backdropFilter: SILAS_BRANDING.components.card.backdrop,
+          fontFamily: SILAS_BRANDING.typography.fontFamily.primary
+        }}
+      >
         SILAS • Stoneclough Initiative for Local & Autonomous Systems
       </footer>
     </div>
