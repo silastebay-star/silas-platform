@@ -14,6 +14,8 @@ import QuickPinModal from './components/QuickPinModal.jsx';
 import AdminPanel from './components/AdminPanel.jsx';
 import SocialPanel from './components/SocialPanel.jsx';
 import NotificationSystem, { NotificationBell } from './components/NotificationSystem.jsx';
+import MobilePinDropper from './components/MobilePinDropper.jsx';
+import { useMobileLocation } from './hooks/useMobileLocation.js';
 import { Progress } from '@/components/ui/progress.jsx';
 import silasLogo from './assets/silas-logo.png';
 import { censusData, getDemographicComparison, getCommunityInsights, formatPercentage, formatPopulation } from './utils/censusData.js';
@@ -5603,6 +5605,8 @@ export default function SilasPlatform() {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [showSocialPanel, setShowSocialPanel] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [mobilePinDropMode, setMobilePinDropMode] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [notifications, setNotifications] = useState([
     {
       id: 1,
@@ -5625,6 +5629,19 @@ export default function SilasPlatform() {
   ]);
   const [mapData, setMapData] = useState({ type: "FeatureCollection", features: [] });
   const [socialFeedPins, setSocialFeedPins] = useState([]);
+
+  // Mobile detection
+  useEffect(() => {
+    const checkMobile = () => {
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                           window.innerWidth <= 768;
+      setIsMobile(isMobileDevice);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   const [showMetrics, setShowMetrics] = useState(null);
   const [boundsWarning, setBoundsWarning] = useState(null);
 
@@ -5785,6 +5802,14 @@ export default function SilasPlatform() {
       mapApiRef.current.flyToCoords(item.coords, 16);
     }
     setViewMode("map");
+
+  const handleMobilePinDrop = (coordinates) => {
+    setShowPinCreation({
+      lngLat: coordinates,
+      layer: 'Economy' // Default layer for mobile drops
+    });
+    setMobilePinDropMode(false);
+  };
     if (item.layer) {
       setActiveLayer(item.layer);
     }
@@ -6183,6 +6208,15 @@ export default function SilasPlatform() {
         notifications={notifications}
       />
 
+      {/* Mobile Pin Dropper */}
+      <MobilePinDropper
+        isActive={mobilePinDropMode}
+        onPinDrop={handleMobilePinDrop}
+        onCancel={() => setMobilePinDropMode(false)}
+        mapRef={mapApiRef}
+        LAYER_CONFIG={LAYER_CONFIG}
+      />
+
       {boundsWarning && (
         <div className="absolute top-32 left-1/2 -translate-x-1/2 z-50 bg-red-500 text-white px-6 py-4 rounded-lg shadow-xl border-2 border-red-600 animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="flex items-center gap-3">
@@ -6220,14 +6254,32 @@ export default function SilasPlatform() {
         </Card>
       )}
 
-      {/* Mobile Quick Pin Button */}
-      <button
-        onClick={() => setShowQuickPin(true)}
-        className="fixed bottom-20 right-4 z-40 h-14 w-14 rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center md:hidden"
-        title="Quick Pin"
-      >
-        <Plus className="h-6 w-6" />
-      </button>
+      {/* Mobile Action Buttons */}
+      {isMobile && (
+        <div className="fixed bottom-20 right-4 z-40 flex flex-col space-y-3">
+          {/* Pin Drop Mode Toggle */}
+          <button
+            onClick={() => setMobilePinDropMode(!mobilePinDropMode)}
+            className={`h-12 w-12 rounded-full shadow-lg text-white flex items-center justify-center transition-all ${
+              mobilePinDropMode
+                ? 'bg-red-600 hover:bg-red-700'
+                : 'bg-purple-600 hover:bg-purple-700'
+            }`}
+            title={mobilePinDropMode ? "Cancel Pin Drop" : "Drop Pin Mode"}
+          >
+            {mobilePinDropMode ? <X className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
+          </button>
+
+          {/* Quick Pin Button */}
+          <button
+            onClick={() => setShowQuickPin(true)}
+            className="h-14 w-14 rounded-full shadow-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center"
+            title="Quick Pin"
+          >
+            <Plus className="h-6 w-6" />
+          </button>
+        </div>
+      )}
 
       <footer className="absolute bottom-2 left-1/2 -translate-x-1/2 z-10 text-xs text-gray-600 bg-white/80 backdrop-blur-sm px-6 py-2 rounded-full shadow-md">
         SILAS • Stoneclough Initiative for Local & Autonomous Systems
