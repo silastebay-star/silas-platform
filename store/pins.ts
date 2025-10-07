@@ -1,7 +1,7 @@
 'use client'
 
 import { create } from 'zustand'
-import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
+import { supabase } from '@/lib/supabase'
 import { CategoryKey } from '@/config/categories'
 
 export interface Pin {
@@ -52,9 +52,8 @@ export const usePinsStore = create<PinState>((set, get) => ({
 
   addPin: async (pinData) => {
     set({ isLoading: true, error: null })
-    
+
     try {
-      const supabase = createClientComponentClient()
       
       const newPin = {
         ...pinData,
@@ -116,9 +115,8 @@ export const usePinsStore = create<PinState>((set, get) => ({
 
   updatePin: async (id, updates) => {
     set({ isLoading: true, error: null })
-    
+
     try {
-      const supabase = createClientComponentClient()
       
       const { error } = await supabase
         .from('pins')
@@ -143,9 +141,8 @@ export const usePinsStore = create<PinState>((set, get) => ({
 
   deletePin: async (id) => {
     set({ isLoading: true, error: null })
-    
+
     try {
-      const supabase = createClientComponentClient()
       
       const { error } = await supabase
         .from('pins')
@@ -168,9 +165,8 @@ export const usePinsStore = create<PinState>((set, get) => ({
 
   fetchPins: async () => {
     set({ isLoading: true, error: null })
-    
+
     try {
-      const supabase = createClientComponentClient()
       
       const { data, error } = await supabase
         .from('pins')

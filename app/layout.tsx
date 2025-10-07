@@ -1,5 +1,6 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter, Orbitron } from 'next/font/google'
+import { ThemeProvider } from 'next-themes'
 import './globals.css'
 
 const inter = Inter({ 
@@ -23,7 +24,11 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_GB',
   },
-  viewport: 'width=device-width, initial-scale=1',
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
   themeColor: '#4C764C',
 }
 
@@ -33,11 +38,18 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en" className={`${inter.variable} ${orbitron.variable}`}>
-      <body className={`${inter.className} antialiased bg-slate-900 text-slate-100`}>
-        <div id="root" className="min-h-screen">
-          {children}
-        </div>
+    <html lang="en" className={`${inter.variable} ${orbitron.variable}`} suppressHydrationWarning>
+      <body className={`${inter.className} antialiased`}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="light"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <div id="root" className="min-h-screen bg-background text-foreground">
+            {children}
+          </div>
+        </ThemeProvider>
       </body>
     </html>
   )
