@@ -2,9 +2,9 @@
 export const SILAS_BRANDING = {
   // Core Brand Colors
   colors: {
-    primary: '#2563EB', // SILAS Blue
-    primaryDark: '#1D4ED8',
-    primaryLight: '#3B82F6',
+    primary: '#4C764C', // SILAS Green
+    primaryDark: '#3d5f3d',
+    primaryLight: '#5a8a5a',
     secondary: '#7C3AED', // SILAS Purple
     secondaryDark: '#6D28D9',
     secondaryLight: '#8B5CF6',

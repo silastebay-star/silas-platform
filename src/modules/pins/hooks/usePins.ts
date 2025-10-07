@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { PinsApi } from '../services/pinsApi';
 import type { Pin, PinFilters } from '../types/pin.types';
 import type { AsyncState } from '@/core/types/common';
+import { SAMPLE_PINS } from '@/data/samplePinsData';
 
 export interface UsePinsReturn extends AsyncState<Pin[]> {
   pins: Pin[];
@@ -20,9 +21,16 @@ export const usePins = (filters: PinFilters = {}): UsePinsReturn => {
 
   const fetchPins = useCallback(async () => {
     setState(prev => ({ ...prev, loading: 'loading', error: null }));
-    
+
     try {
-      const pins = await PinsApi.getPins(filters);
+      // Use sample data for now - replace with real API call later
+      let pins = SAMPLE_PINS as Pin[];
+
+      // Apply filters
+      if (filters.category_id && filters.category_id !== 'all') {
+        pins = pins.filter(pin => pin.category?.id === filters.category_id);
+      }
+
       setState({
         data: pins,
         loading: 'success',
