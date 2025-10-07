@@ -69,13 +69,12 @@ if (typeof window !== 'undefined') {
 
 const LAYER_CONFIG = {
   All: { color: "#4c764c", id: "all", icon: MapPin },
-  Economy: { color: "#4c764c", id: "economy", icon: Briefcase },
-  Faith: { color: "#d2a24c", id: "faith", icon: Church },
-  Works: { color: "#3c82b3", id: "works", icon: Hammer },
-  Pulse: { color: "#6c4c76", id: "pulse", icon: TrendingUp },
-  Mind: { color: "#6e7a72", id: "mind", icon: Lightbulb },
-  Circle: { color: "#b35c8a", id: "circle", icon: Users },
-  Commerce: { color: "#2f7a4a", id: "commerce", icon: Briefcase },
+  faith: { color: "#8B5CF6", id: "faith", icon: Church },
+  commerce: { color: "#10B981", id: "commerce", icon: Briefcase },
+  works: { color: "#F59E0B", id: "works", icon: Hammer },
+  circle: { color: "#EF4444", id: "circle", icon: Users },
+  mind: { color: "#3B82F6", id: "mind", icon: Lightbulb },
+  pulse: { color: "#EC4899", id: "pulse", icon: TrendingUp },
 };
 
 // MapboxCentral Component now accepts GeoJSON data directly
@@ -242,13 +241,8 @@ function MapboxCentral({ mapData, kmlUrl, onSelect, mapApiRef, activeLayer, onRi
       ];
       map.setMaxBounds(stonecloughBounds);
 
-      // Add a test marker to verify map is working
-      const marker = new mapboxgl.Marker({ color: '#FF0000' })
-        .setLngLat([-2.3769, 53.5526])
-        .setPopup(new mapboxgl.Popup().setHTML('<h3>Stoneclough Community</h3><p>Welcome to SILAS Platform!</p>'))
-        .addTo(map);
-
-      console.log('Test marker added to map');
+      // Sample pins will be loaded via GeoJSON data source
+      console.log('Map ready for sample pin data');
 
       // Force resize to ensure proper display
       setTimeout(() => {
@@ -299,11 +293,27 @@ function MapboxCentral({ mapData, kmlUrl, onSelect, mapApiRef, activeLayer, onRi
       }
 
       // 2) Load map data (now passed as a prop)
-      console.log('Adding map data to map:', {
+      console.log('🗺️ Adding map data to map:', {
         hasMapData: !!mapData,
         featureCount: mapData?.features?.length || 0,
-        mapDataType: mapData?.type
+        mapDataType: mapData?.type,
+        sampleFeatures: mapData?.features?.slice(0, 3).map(f => ({
+          id: f.id,
+          layer: f.properties?.layer,
+          name: f.properties?.name,
+          coordinates: f.geometry?.coordinates
+        }))
       });
+
+      if (mapData?.features?.length > 0) {
+        console.log('🎯 Sample pin details:', mapData.features.map(f => ({
+          id: f.id,
+          name: f.properties?.name,
+          layer: f.properties?.layer,
+          coords: f.geometry?.coordinates,
+          hasAllProps: !!(f.properties?.name && f.properties?.layer)
+        })));
+      }
 
       if (!map.getSource("communityData")) {
         map.addSource("communityData", {
@@ -5661,8 +5671,20 @@ export default function SilasPlatform() {
         coordinates: pin.coordinates
       },
       properties: {
-        ...pin,
-        category: pin.layer
+        id: pin.id,
+        name: pin.name,
+        description: pin.description,
+        layer: pin.layer,
+        category: pin.layer,
+        subcategory: pin.subcategory,
+        pinType: pin.pinType,
+        priority: pin.priority,
+        tags: pin.tags,
+        reactions: pin.reactions,
+        comments: pin.comments,
+        created_at: pin.created_at,
+        created_by: pin.created_by,
+        metadata: pin.metadata
       }
     }))
   });
@@ -5680,6 +5702,24 @@ export default function SilasPlatform() {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Debug: Log sample data loading
+  useEffect(() => {
+    console.log('🗺️ SILAS Sample Data Loaded:', {
+      totalPins: socialFeedPins.length,
+      mapFeatures: mapData.features.length,
+      pinsByCategory: socialFeedPins.reduce((acc, pin) => {
+        acc[pin.layer] = (acc[pin.layer] || 0) + 1;
+        return acc;
+      }, {}),
+      samplePins: socialFeedPins.slice(0, 3).map(pin => ({
+        id: pin.id,
+        name: pin.name,
+        layer: pin.layer,
+        coordinates: pin.coordinates
+      }))
+    });
+  }, [socialFeedPins, mapData]);
   const [showMetrics, setShowMetrics] = useState(null);
   const [boundsWarning, setBoundsWarning] = useState(null);
 
