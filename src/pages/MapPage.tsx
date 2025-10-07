@@ -1,19 +1,16 @@
 import React, { useState } from 'react';
-import { PinCard, usePins } from '@/modules/pins';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Filter, Search, Menu, X } from 'lucide-react';
-import InteractiveMap from '@/components/InteractiveMap';
-import SilasHeader from '@/components/SilasHeader';
+import { Search, Menu, X, MapPin } from 'lucide-react';
+import MapRoot from '@/modules/pins/MapRoot';
+import { usePinsStore } from '@/store/pins';
 
 const MapPage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [showSidebar, setShowSidebar] = useState(true);
 
-  const { pins, loading, error } = usePins({
-    category_id: selectedCategory === 'all' ? undefined : selectedCategory
-  });
+  const { pins, isLoading, error } = usePinsStore();
 
   const categories = [
     { id: 'all', name: 'All', color: '#4C764C' },
@@ -33,7 +30,17 @@ const MapPage: React.FC = () => {
   return (
     <div className="h-screen flex flex-col">
       {/* Header */}
-      <SilasHeader />
+      <div className="bg-[#4C764C] text-white p-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center space-x-3">
+            <MapPin className="w-6 h-6" />
+            <h1 className="text-xl font-bold">SILAS Community Map</h1>
+          </div>
+          <div className="text-sm">
+            Stoneclough Initiative for Local & Autonomous Systems
+          </div>
+        </div>
+      </div>
 
       <div className="flex-1 flex">
         {/* Sidebar */}
@@ -41,7 +48,7 @@ const MapPage: React.FC = () => {
           {/* Sidebar Header */}
           <div className="p-4 border-b">
             <div className="flex items-center justify-between mb-4">
-              <h1 className="text-xl font-bold text-gray-900">Community Pins</h1>
+              <h2 className="text-lg font-semibold text-gray-900">Community Pins</h2>
               <Button
                 size="sm"
                 onClick={() => setShowSidebar(!showSidebar)}
@@ -86,7 +93,7 @@ const MapPage: React.FC = () => {
 
           {/* Pin List */}
           <div className="flex-1 overflow-y-auto p-4">
-            {loading && (
+            {isLoading && (
               <div className="text-center py-8">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4C764C] mx-auto"></div>
                 <p className="text-gray-500 mt-2">Loading pins...</p>
@@ -95,27 +102,45 @@ const MapPage: React.FC = () => {
 
             {error && (
               <div className="text-center py-8">
-                <p className="text-red-500">Error loading pins: {error}</p>
+                <p className="text-red-500">Error: {error}</p>
               </div>
             )}
 
-            {!loading && !error && filteredPins.length === 0 && (
+            {!isLoading && !error && filteredPins.length === 0 && (
               <div className="text-center py-8">
-                <p className="text-gray-500">No pins found</p>
-                <p className="text-sm text-gray-400 mt-2">Click on the map to create a new pin</p>
+                <MapPin className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-gray-500 mb-2">No pins found</p>
+                <p className="text-sm text-gray-400">Right-click on the map to add a new pin</p>
               </div>
             )}
 
-            <div className="space-y-4">
+            <div className="space-y-3">
               {filteredPins.map((pin) => (
-                <PinCard
+                <div
                   key={pin.id}
-                  pin={pin}
-                  compact
-                  onClick={(pin) => {
-                    console.log('Selected pin:', pin);
-                  }}
-                />
+                  className="p-3 border border-gray-200 rounded-lg hover:shadow-md transition-shadow cursor-pointer"
+                  onClick={() => console.log('Selected pin:', pin)}
+                >
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-900 text-sm">{pin.title}</h3>
+                      {pin.description && (
+                        <p className="text-gray-600 text-xs mt-1 line-clamp-2">{pin.description}</p>
+                      )}
+                      <div className="flex items-center space-x-2 mt-2">
+                        <span
+                          className="inline-block px-2 py-1 rounded-full text-xs font-medium text-white"
+                          style={{ backgroundColor: categories.find(c => c.id === pin.type)?.color || '#6B7280' }}
+                        >
+                          {pin.type}
+                        </span>
+                        {pin.category && (
+                          <span className="text-xs text-gray-500">{pin.category}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
               ))}
             </div>
           </div>
@@ -123,7 +148,7 @@ const MapPage: React.FC = () => {
 
         {/* Map Container */}
         <div className="flex-1 relative">
-          <InteractiveMap className="w-full h-full" />
+          <MapRoot className="w-full h-full" />
 
           {/* Toggle Sidebar Button */}
           {!showSidebar && (
