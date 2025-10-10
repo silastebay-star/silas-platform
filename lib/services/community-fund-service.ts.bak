@@ -1,0 +1,425 @@
+/**
+ * Community Fund Service
+ * Handles Stripe integration for transparent community fund management
+ */
+
+// @ts-nocheck
+
+import { createSupabaseClient, withSupabaseErrorHandling } from '@/lib/supabase/client'
+import { loadStripe } from '@stripe/stripe-js'
+import type { Database } from '@/lib/supabase/database.types'
+
+export type TransactionType = 'contribution' | 'allocation' | 'refund' | 'fee'
+export type TransactionStatus = 'pending' | 'completed' | 'failed' | 'refunded'
+
+export interface FundTransaction {
+  id: string
+  transaction_type: TransactionType
+  amount: number
+  currency: string
+  stripe_payment_intent_id?: string
+  stripe_charge_id?: string
+  contributor_user_id?: string
+  pin_id?: string
+  project_id?: string
+  allocated_by?: string
+  status: TransactionStatus
+  description?: string
+  metadata: Record<string, any>
+  created_at: string
+  updated_at: string
+  
+  // Joined data
+  contributor?: {
+    id: string
+    display_name?: string
+    avatar_url?: string
+  }
+  pin?: {
+    id: string
+    title: string
+    category: string
+  }
+  project?: {
+    id: string
+    title: string
+  }
+}
+
+export interface ContributionData {
+  amount: number
+  currency?: string
+  description?: string
+  metadata?: Record<string, any>
+}
+
+export interface AllocationData {
+  pin_id?: string
+  project_id?: string
+  amount: number
+  description?: string
+  metadata?: Record<string, any>
+}
+
+export interface FundFilters {
+  transaction_type?: TransactionType
+  status?: TransactionStatus
+  contributor_user_id?: string
+  pin_id?: string
+  project_id?: string
+  date_from?: string
+  date_to?: string
+}
+
+export interface PaginationOptions {
+  limit?: number
+  offset?: number
+  order_by?: string
+  order_direction?: 'asc' | 'desc'
+}
+
+export interface FundSummary {
+  total_contributions: number
+  total_allocations: number
+  available_balance: number
+  pending_contributions: number
+  total_contributors: number
+  total_projects_funded: number
+  currency: string
+}
+
+class CommunityFundService {
+  private supabase = createSupabaseClient()
+  private stripe = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+
+  // =============================================
+  // STRIPE INTEGRATION
+  // =============================================
+
+  async createPaymentIntent(data: ContributionData): Promise<{
+    client_secret: string;
+    payment_intent_id: string;
+    error?: string
+  }> {
+    try {
+      const response = await fetch('/api/fund/create-payment-intent', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: Math.round(data.amount * 100), // Convert to cents
+          currency: data.currency || 'gbp',
+          description: data.description,
+          metadata: data.metadata
+        }),
+      })
+
+      if (!response.ok) {
+        return {
+          client_secret: '',
+          payment_intent_id: '',
+          error: 'Failed to create payment intent'
+        }
+      }
+
+      const result = await response.json()
+
+      return {
+        client_secret: result.client_secret,
+        payment_intent_id: result.payment_intent_id,
+        error: undefined
+      }
+    } catch (error) {
+      return {
+        client_secret: '',
+        payment_intent_id: '',
+        error: error instanceof Error ? error.message : 'Unknown error'
+      }
+    }
+  }
+
+  async confirmContribution(
+    paymentIntentId: string,
+    chargeId: string,
+    amount: number,
+    description?: string
+  ): Promise<{ transaction: FundTransaction; error?: string }> {
+    return (withSupabaseErrorHandling as any)(async () => {
+      const { data: transaction, error } = await (this.supabase
+        .from('fund_transactions'))
+        .insert({
+          transaction_type: 'contribution',
+          amount,
+          currency: 'GBP',
+          stripe_payment_intent_id: paymentIntentId,
+          stripe_charge_id: chargeId,
+          status: 'completed',
+          description: description || 'Community fund contribution'
+        })
+        .select(`
+          *,
+          contributor:user_profiles(id, display_name, avatar_url)
+        `)
+        .single()
+
+      if (error) throw error
+
+      return { transaction }
+    })
+  }
+
+  // =============================================
+  // FUND MANAGEMENT
+  // =============================================
+
+  async allocateFunds(data: AllocationData): Promise<{ 
+    transaction: FundTransaction; 
+    error?: string 
+  }> {
+    return (withSupabaseErrorHandling as any)(async () => {
+      // Check available balance
+      const { available_balance } = await this.getFundSummary()
+      
+      if (data.amount > available_balance) {
+        throw new Error('Insufficient funds available for allocation')
+      }
+
+      const { data: transaction, error } = await (this.supabase
+        .from('fund_transactions')))
+        .insert({
+          transaction_type: 'allocation',
+          amount: -data.amount, // Negative for allocation
+          currency: 'GBP',
+          pin_id: data.pin_id,
+          project_id: data.project_id,
+          status: 'completed',
+          description: data.description || 'Fund allocation'
+        })
+        .select(`
+          *,
+          pin:pins(id, title, category),
+          project:projects(id, title)
+        `)
+        .single()
+
+      if (error) throw error
+
+      // Update pin fund allocation if applicable
+      if (data.pin_id) {
+        await (this.supabase
+          .from('pins')
+          .update({ 
+            fund_approved_amount: this.supabase.sql`COALESCE(fund_approved_amount, 0) + ${data.amount}`
+          })
+          .eq('id', data.pin_id)
+      }
+
+      return { transaction }
+    })
+  }
+
+  async getTransactions(
+    filters: FundFilters = {},
+    pagination: PaginationOptions = {}
+  ): Promise<{ transactions: FundTransaction[]; total?: number; error?: string }> {
+    return (withSupabaseErrorHandling as any)(async () => {
+      let query = this.supabase
+        .from('fund_transactions'))
+        .select(`
+          *,
+          contributor:user_profiles(id, display_name, avatar_url),
+          pin:pins(id, title, category),
+          project:projects(id, title)
+        `, { count: 'exact' })
+
+      // Apply filters
+      if (filters.transaction_type) {
+        query = query.eq('transaction_type', filters.transaction_type)
+      }
+      if (filters.status) {
+        query = query.eq('status', filters.status)
+      }
+      if (filters.contributor_user_id) {
+        query = query.eq('contributor_user_id', filters.contributor_user_id)
+      }
+      if (filters.pin_id) {
+        query = query.eq('pin_id', filters.pin_id)
+      }
+      if (filters.project_id) {
+        query = query.eq('project_id', filters.project_id)
+      }
+      if (filters.date_from) {
+        query = query.gte('created_at', filters.date_from)
+      }
+      if (filters.date_to) {
+        query = query.lte('created_at', filters.date_to)
+      }
+
+      // Apply pagination and ordering
+      const limit = pagination.limit || 50
+      const offset = pagination.offset || 0
+      const orderBy = pagination.order_by || 'created_at'
+      const orderDirection = pagination.order_direction || 'desc'
+
+      query = query
+        .order(orderBy, { ascending: orderDirection === 'asc' })
+        .range(offset, offset + limit - 1)
+
+      const { data: transactions, error, count } = await query
+
+      if (error) throw error
+
+      return { transactions: transactions || [], total: count || 0 }
+    })
+  }
+
+  async getFundSummary(): Promise<FundSummary> {
+    return (withSupabaseErrorHandling as any)(async () => {
+      // Get contribution totals
+      const { data: contributionData } = await (this.supabase
+        .from('fund_transactions'))
+        .select('amount, status')
+        .eq('transaction_type', 'contribution')
+
+      // Get allocation totals
+      const { data: allocationData } = await (this.supabase
+        .from('fund_transactions'))
+        .select('amount')
+        .eq('transaction_type', 'allocation')
+        .eq('status', 'completed')
+
+      // Get contributor count
+      const { count: contributorCount } = await (this.supabase
+        .from('fund_transactions'))
+        .select('contributor_user_id', { count: 'exact' })
+        .eq('transaction_type', 'contribution')
+        .eq('status', 'completed')
+        .not('contributor_user_id', 'is', null)
+
+      // Get funded projects count
+      const { count: fundedProjectsCount } = await (this.supabase
+        .from('fund_transactions'))
+        .select('project_id', { count: 'exact' })
+        .eq('transaction_type', 'allocation')
+        .eq('status', 'completed')
+        .not('project_id', 'is', null)
+
+      const totalContributions = contributionData
+        ?.filter(t => t.status === 'completed')
+        .reduce((sum, t) => sum + t.amount, 0) || 0
+
+      const pendingContributions = contributionData
+        ?.filter(t => t.status === 'pending')
+        .reduce((sum, t) => sum + t.amount, 0) || 0
+
+      const totalAllocations = Math.abs(allocationData
+        ?.reduce((sum, t) => sum + t.amount, 0) || 0)
+
+      return {
+        total_contributions: totalContributions,
+        total_allocations: totalAllocations,
+        available_balance: totalContributions - totalAllocations,
+        pending_contributions: pendingContributions,
+        total_contributors: contributorCount || 0,
+        total_projects_funded: fundedProjectsCount || 0,
+        currency: 'GBP'
+      }
+    })
+  }
+
+  async getPinFundingStatus(pinId: string): Promise<{
+    requested_amount?: number
+    approved_amount?: number
+    allocated_amount: number
+    error?: string
+  }> {
+    return (withSupabaseErrorHandling as any)(async () => {
+      // Get pin funding info
+      const { data: pin } = await (this.supabase
+        .from('pins')
+        .select('fund_request_amount, fund_approved_amount')
+        .eq('id', pinId)
+        .single()
+
+      // Get total allocated to this pin
+      const { data: allocations } = await (this.supabase
+        .from('fund_transactions'))
+        .select('amount')
+        .eq('transaction_type', 'allocation')
+        .eq('pin_id', pinId)
+        .eq('status', 'completed')
+
+      const allocatedAmount = Math.abs(allocations
+        ?.reduce((sum, t) => sum + t.amount, 0) || 0)
+
+      return {
+        requested_amount: pin?.fund_request_amount,
+        approved_amount: pin?.fund_approved_amount,
+        allocated_amount: allocatedAmount
+      }
+    })
+  }
+
+  // =============================================
+  // TRANSPARENCY & REPORTING
+  // =============================================
+
+  async getMonthlyReport(year: number, month: number): Promise<{
+    contributions: number
+    allocations: number
+    net_change: number
+    transaction_count: number
+    top_funded_categories: Array<{ category: string; amount: number }>
+    error?: string
+  }> {
+    return (withSupabaseErrorHandling as any)(async () => {
+      const startDate = new Date(year, month - 1, 1).toISOString()
+      const endDate = new Date(year, month, 0, 23, 59, 59).toISOString()
+
+      // Get monthly transactions
+      const { data: transactions } = await (this.supabase
+        .from('fund_transactions'))
+        .select(`
+          amount,
+          transaction_type,
+          pin:pins(category)
+        `)
+        .gte('created_at', startDate)
+        .lte('created_at', endDate)
+        .eq('status', 'completed')
+
+      const contributions = transactions
+        ?.filter(t => t.transaction_type === 'contribution')
+        .reduce((sum, t) => sum + t.amount, 0) || 0
+
+      const allocations = Math.abs(transactions
+        ?.filter(t => t.transaction_type === 'allocation')
+        .reduce((sum, t) => sum + t.amount, 0) || 0)
+
+      // Calculate top funded categories
+      const categoryFunding: Record<string, number> = {}
+      transactions
+        ?.filter(t => t.transaction_type === 'allocation' && t.pin?.category)
+        .forEach(t => {
+          const category = t.pin!.category
+          categoryFunding[category] = (categoryFunding[category] || 0) + Math.abs(t.amount)
+        })
+
+      const topFundedCategories = Object.entries(categoryFunding)
+        .map(([category, amount]) => ({ category, amount }))
+        .sort((a, b) => b.amount - a.amount)
+        .slice(0, 5)
+
+      return {
+        contributions,
+        allocations,
+        net_change: contributions - allocations,
+        transaction_count: transactions?.length || 0,
+        top_funded_categories: topFundedCategories
+      }
+    })
+  }
+}
+
+export default new CommunityFundService()

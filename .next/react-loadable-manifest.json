@@ -1,0 +1,68 @@
+{
+  "app/map/page.tsx -> @/components/map/MapView": {
+    "id": 18630,
+    "files": [
+      "static/css/50d961e0780b75d4.css",
+      "static/chunks/b2ece9dd-7e047124709523fb.js",
+      "static/chunks/3864-e8f2dfffeab7eab0.js",
+      "static/chunks/405-8e61434e472ecc59.js",
+      "static/chunks/7381-475611f1171f3108.js",
+      "static/chunks/6815.8ad301d3e6687409.js",
+      "static/chunks/8630.bf2c193d40bcb386.js"
+    ]
+  },
+  "app/map/page.tsx -> @/components/navigation/UnifiedFloatingNav": {
+    "id": 62208,
+    "files": [
+      "static/chunks/1350-ffe0e918f5022a0f.js",
+      "static/chunks/2208-0b69234e623ee5f1.js",
+      "static/chunks/4426.32a793cb29e59457.js"
+    ]
+  },
+  "app/projects/page.tsx -> @/components/navigation/UnifiedFloatingNav": {
+    "id": 62208,
+    "files": [
+      "static/chunks/1350-ffe0e918f5022a0f.js",
+      "static/chunks/2973-6b6d7196434c2e2e.js",
+      "static/chunks/7764-25a6a85a96b0d7b9.js",
+      "static/chunks/2208-0b69234e623ee5f1.js",
+      "static/chunks/5556.bcf90c7da2231a75.js"
+    ]
+  },
+  "app/projects/page.tsx -> @/components/projects/LaunchProjectForm": {
+    "id": 6651,
+    "files": [
+      "static/chunks/2973-6b6d7196434c2e2e.js",
+      "static/chunks/5118-f50a601804b17c5e.js",
+      "static/chunks/405-8e61434e472ecc59.js",
+      "static/chunks/9520-902a6beb21c1bca7.js",
+      "static/chunks/6651.6619680c2bc56068.js"
+    ]
+  },
+  "lib/monitoring.ts -> web-vitals": {
+    "id": 49282,
+    "files": [
+      "static/chunks/9282.34f8035647fda4ec.js"
+    ]
+  },
+  "node_modules/.pnpm/@supabase+auth-js@2.74.0/node_modules/@supabase/auth-js/dist/module/lib/helpers.js -> @supabase/node-fetch": {
+    "id": 18773,
+    "files": []
+  },
+  "node_modules/.pnpm/@supabase+functions-js@2.74.0/node_modules/@supabase/functions-js/dist/module/helper.js -> @supabase/node-fetch": {
+    "id": 18773,
+    "files": []
+  },
+  "node_modules/.pnpm/@supabase+realtime-js@2.74.0/node_modules/@supabase/realtime-js/dist/module/RealtimeClient.js -> @supabase/node-fetch": {
+    "id": 18773,
+    "files": []
+  },
+  "node_modules/.pnpm/@supabase+storage-js@2.74.0/node_modules/@supabase/storage-js/dist/module/lib/helpers.js -> @supabase/node-fetch": {
+    "id": 18773,
+    "files": []
+  },
+  "node_modules/.pnpm/@vis.gl+react-mapbox@8.1.0_mapbox-gl@3.15.0_react-dom@19.2.0_react@19.2.0__react@19.2.0/node_modules/@vis.gl/react-mapbox/dist/components/map.js -> mapbox-gl": {
+    "id": 80046,
+    "files": []
+  }
+}
