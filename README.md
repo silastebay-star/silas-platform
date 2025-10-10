@@ -1,6 +1,8 @@
 # SILAS Platform - Stoneclough Initiative for Local & Autonomous Systems
 
-A production-ready community engagement platform built with React, Mapbox GL JS, and modern web technologies.
+A production-ready community engagement platform built with Next.js, Supabase, and modern web technologies.
+
+<!-- Deployment trigger: 2025-01-10 -->
 
 ## 🌟 Features
 
