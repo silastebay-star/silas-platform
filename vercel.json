@@ -1,6 +1,9 @@
 {
   "version": 2,
   "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install",
   "headers": [
     {
       "source": "/_next/static/(.*)",
@@ -10,22 +13,30 @@
           "value": "public, max-age=31536000, immutable"
         }
       ]
-    }
-  ],
-  "redirects": [
+    },
     {
-      "source": "/",
-      "destination": "/map",
-      "permanent": true
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        }
+      ]
     }
   ],
   "functions": {
-    "api/**": {
-      "memory": 1024, // Increase memory for API routes if needed
-      "maxDuration": 10 // Increase timeout for API routes if needed
+    "app/api/**/*.ts": {
+      "memory": 1024,
+      "maxDuration": 30
     }
-  }
-  // Environment Variables: Manage sensitive environment variables directly in Vercel's dashboard.
-  // Do NOT commit sensitive keys to your repository.
-  // Example: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_MAPBOX_TOKEN
+  },
+  "regions": ["iad1"]
 }
