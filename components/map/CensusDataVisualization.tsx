@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useMap } from 'react-map-gl/mapbox'
+import { useMap } from 'react-map-gl'
 import { handleError } from '@/lib/error-handling'
 
 export function CensusDataVisualization() {

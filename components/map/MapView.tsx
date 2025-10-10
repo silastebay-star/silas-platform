@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import Map, { MapProvider, Source, Layer, NavigationControl, GeolocateControl } from 'react-map-gl/mapbox'
+import Map, { MapProvider, Source, Layer, NavigationControl, GeolocateControl } from 'react-map-gl'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { MapPin, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
