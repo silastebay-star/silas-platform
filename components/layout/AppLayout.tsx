@@ -2,10 +2,11 @@
 
 import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import TopNavbar from '@/components/navigation/TopNavbar'
+import FloatingNavbar from '@/components/navigation/FloatingNavbar'
 import LeftSidebar from '@/components/navigation/LeftSidebar'
 import { usePinsStore } from '@/store/pins'
 import { CategoryKey } from '@/config/categories'
+import { PushNotificationManager } from '@/components/notifications/PushNotificationManager'
 
 interface AppLayoutProps {
   children: React.ReactNode | ((props: {
@@ -170,19 +171,19 @@ function AppLayoutContent({ children }: AppLayoutProps) {
   }, [searchQuery, selectedCategories])
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      {/* Top Navigation */}
-      <TopNavbar
+    <div className="h-screen bg-gray-50 relative">
+      <PushNotificationManager />
+      {/* Floating Navigation */}
+      <FloatingNavbar
         currentView={currentView}
         onViewChange={handleViewChange}
         onAddPin={handleAddPin}
-        onToggleSidebar={handleToggleSidebar}
         searchQuery={searchQuery}
         onSearchChange={handleSearchChange}
       />
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
+      <div className="h-full flex overflow-hidden">
         {/* Left Sidebar */}
         <LeftSidebar
           isCollapsed={isSidebarCollapsed}

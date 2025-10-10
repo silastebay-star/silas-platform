@@ -19,15 +19,19 @@ module.exports = {
     extend: {
       colors: {
         // SILAS Brand Colors
-        'silas-green': 'var(--color-primary-500)',
-        'silas-dark': '#1C1F1C',
-        'silas-light': '#E6F0E6',
-        'silas-gray': '#6B7280',
+        'silas-green': '#4C764C',
+        'silas-sky-blue': '#63B3ED',
+        'silas-warm-yellow': '#FFD700',
+        'silas-slate-dark': '#1C1F1C',
+        'silas-light-grey': '#E6E6E6',
+        'silas-pure-white': '#FFFFFF',
         silas: {
-          green: 'var(--color-primary-500)',
-          dark: '#1C1F1C',
-          light: '#E6F0E6',
-          gray: '#6B7280',
+          green: '#4C764C',
+          'sky-blue': '#63B3ED',
+          'warm-yellow': '#FFD700',
+          'slate-dark': '#1C1F1C',
+          'light-grey': '#E6E6E6',
+          'pure-white': '#FFFFFF'
         },
         // Design System Colors
         'primary-50': 'var(--color-primary-50)',
@@ -89,6 +93,7 @@ module.exports = {
       fontFamily: {
         'sans': 'var(--font-sans)',
         'heading': 'var(--font-heading)',
+        'accent': 'var(--font-accent)',
         'mono': 'var(--font-mono)',
       },
       borderRadius: {

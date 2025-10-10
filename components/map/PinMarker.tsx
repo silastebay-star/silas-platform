@@ -3,17 +3,18 @@
 import { memo, useMemo } from 'react'
 import { Pin, CategoryKey } from '@/types/silas'
 import { CATEGORIES } from '@/types/silas'
-import { 
-  MapPin, 
-  Users, 
-  Church, 
-  Building2, 
-  Calendar, 
-  Database, 
+import {
+  MapPin,
+  Users,
+  Church,
+  Building2,
+  Calendar,
+  Database,
   AlertTriangle,
   Eye,
   Clock,
-  CheckCircle
+  CheckCircle,
+  Leaf
 } from 'lucide-react'
 
 interface PinMarkerProps {
@@ -29,10 +30,12 @@ interface PinMarkerProps {
 // Category icon mapping
 const CATEGORY_ICONS: Record<CategoryKey, React.ComponentType<any>> = {
   community: Users,
-  faith: Church,
   projects: Building2,
-  economy: Building2,
   events: Calendar,
+  economy: Building2,
+  environment: Leaf,
+  safety: AlertTriangle,
+  faith: Church,
   data_ai: Database,
   issues: AlertTriangle
 }

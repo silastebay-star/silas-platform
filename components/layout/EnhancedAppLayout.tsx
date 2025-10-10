@@ -8,9 +8,9 @@ import { useAuth } from '@/contexts/AuthContext'
 import { useRealtimePins } from '@/hooks/useRealtimePins'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
-import TopNavbar from '@/components/navigation/TopNavbar'
-import LeftSidebar from '@/components/navigation/LeftSidebar'
+import FloatingNavbar from '@/components/navigation/FloatingNavbar'
 import MapRoot from '@/components/map/MapRoot'
+import FloatingFilterWidget from '@/components/map/FloatingFilterWidget'
 import AddPinModal from '@/components/map/AddPinModal'
 import AuthModal from '@/components/auth/AuthModal'
 import { UserAnalytics } from '@/lib/monitoring'
@@ -25,7 +25,6 @@ function EnhancedAppLayoutContent({ children }: EnhancedAppLayoutProps) {
   const { user, profile } = useAuth()
 
   // UI State
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [currentView, setCurrentView] = useState<'map' | 'social' | 'data'>('map')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategories, setSelectedCategories] = useState<CategoryKey[]>([])
@@ -82,6 +81,14 @@ function EnhancedAppLayoutContent({ children }: EnhancedAppLayoutProps) {
       }
     }
   })
+
+  // Calculate category statistics
+  const categoryStats = pins.reduce((acc, pin) => {
+    pin.categories.forEach(category => {
+      acc[category as CategoryKey] = (acc[category as CategoryKey] || 0) + 1
+    })
+    return acc
+  }, {} as Record<CategoryKey, number>)
 
   // Initialize from URL parameters
   useEffect(() => {
@@ -273,39 +280,37 @@ function EnhancedAppLayoutContent({ children }: EnhancedAppLayoutProps) {
   }, [selectedPin, showAddPinModal, showAuthModal, handleViewChange, handleAddPin, handleClearFilters, handleClosePinDrawer])
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50">
-      {/* Top Navigation */}
-      <TopNavbar
+    <div className="h-screen bg-gray-50 relative">
+      {/* Floating Navigation */}
+      <FloatingNavbar
         currentView={currentView}
         onViewChange={handleViewChange}
         onAddPin={handleAddPin}
-        onToggleSidebar={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         searchQuery={searchQuery}
         onSearchChange={handleSearchChange}
       />
 
-      {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar */}
-        <LeftSidebar
-          isCollapsed={isSidebarCollapsed}
-          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-          selectedCategories={selectedCategories}
-          onCategoryToggle={handleCategoryToggle}
-          onClearFilters={handleClearFilters}
-        />
-
-        {/* Map Container */}
-        <div className="flex-1 relative">
+      {/* Main Content - Full Screen */}
+      <div className="h-full relative overflow-hidden">
+        {/* Map Container - now full width */}
           {currentView === 'map' && (
-            <MapRoot
-              activeCategory={activeCategory}
-              filters={mapFilters}
-              onPinSelect={handlePinSelect}
-              onPinHover={handlePinHover}
-              onMapMove={handleMapMove}
-              className="w-full h-full"
-            />
+            <>
+              <MapRoot
+                activeCategory={activeCategory}
+                filters={mapFilters}
+                onPinSelect={handlePinSelect}
+                onPinHover={handlePinHover}
+                onMapMove={handleMapMove}
+                className="w-full h-full"
+              />
+
+              {/* Floating Filter Widget */}
+              <FloatingFilterWidget
+                selectedCategories={selectedCategories}
+                onCategoryToggle={handleCategoryToggle}
+                pinCounts={categoryStats}
+              />
+            </>
           )}
 
           {currentView === 'social' && (
@@ -328,7 +333,6 @@ function EnhancedAppLayoutContent({ children }: EnhancedAppLayoutProps) {
 
           {/* Custom children if provided */}
           {children}
-        </div>
 
         {/* Pin Drawer - TODO: Update PinDrawer to use new Pin type */}
         {selectedPin && (

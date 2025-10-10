@@ -7,15 +7,25 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/contexts/AuthContext'
 import PinLayer from './PinLayer'
 import PinPreviewTooltip from './PinPreviewTooltip'
+import GeoJSONOverlay from './GeoJSONOverlay'
 import { ErrorTracker, PerformanceTracker } from '@/lib/monitoring'
+import {
+  loadBoundaryConfig,
+  getBoundaryConfig,
+  BOUNDARY_LAYER_CONFIG,
+  BOUNDARY_OUTLINE_LAYER_CONFIG
+} from '@/lib/boundary-utils'
 
 // Mapbox access token
 mapboxgl.accessToken = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || ''
 
-// Default map configuration for Stoneclough village
+// Get boundary configuration
+const boundaryConfig = getBoundaryConfig()
+
+// Default map configuration using boundary center
 const DEFAULT_VIEW_STATE: MapViewState = {
-  longitude: -2.4833, // Stoneclough coordinates
-  latitude: 53.5500,
+  longitude: boundaryConfig.center[0],
+  latitude: boundaryConfig.center[1],
   zoom: 15,
   bearing: 0,
   pitch: 0
@@ -28,6 +38,7 @@ interface MapRootState {
   pins: Pin[]
   selectedPin: Pin | null
   hoveredPin: Pin | null
+  showGeoJSONOverlay: boolean
   previewTooltip: {
     pin: Pin | null
     position: { x: number; y: number }
@@ -57,6 +68,7 @@ export default function MapRoot({
     pins: [],
     selectedPin: null,
     hoveredPin: null,
+    showGeoJSONOverlay: false,
     previewTooltip: {
       pin: null,
       position: { x: 0, y: 0 },
@@ -78,18 +90,37 @@ export default function MapRoot({
 
     PerformanceTracker.startTiming('map-initialization')
 
-    try {
-      map.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: DEFAULT_STYLE,
-        center: [DEFAULT_VIEW_STATE.longitude, DEFAULT_VIEW_STATE.latitude],
-        zoom: DEFAULT_VIEW_STATE.zoom,
-        bearing: DEFAULT_VIEW_STATE.bearing,
-        pitch: DEFAULT_VIEW_STATE.pitch,
-        antialias: true,
-        maxZoom: 20,
-        minZoom: 10
-      })
+    // Load boundary data first
+    loadBoundaryConfig().then(() => {
+      initializeMap()
+    }).catch(error => {
+      console.error('Failed to load boundary data:', error)
+      initializeMap() // Continue with fallback
+    })
+
+    function initializeMap() {
+      if (!mapContainer.current || map.current) return
+
+      try {
+        const boundaryConfig = getBoundaryConfig()
+        map.current = new mapboxgl.Map({
+          container: mapContainer.current,
+          style: DEFAULT_STYLE,
+          center: boundaryConfig.center,
+          zoom: DEFAULT_VIEW_STATE.zoom,
+          bearing: DEFAULT_VIEW_STATE.bearing,
+          pitch: DEFAULT_VIEW_STATE.pitch,
+          antialias: true,
+          maxZoom: 20,
+          minZoom: 10,
+          maxBounds: boundaryConfig.maxBounds
+        })
+
+        // Fit map to boundary on initialization
+        map.current.fitBounds(boundaryConfig.bounds, {
+          padding: 50,
+          duration: 0 // No animation on initial load
+        })
 
       // Add navigation controls
       map.current.addControl(new mapboxgl.NavigationControl(), 'top-right')
@@ -104,11 +135,66 @@ export default function MapRoot({
       })
       map.current.addControl(geolocate, 'top-right')
 
-      // Map event handlers
-      map.current.on('load', () => {
-        setState(prev => ({ ...prev, isLoaded: true }))
-        PerformanceTracker.endTiming('map-initialization')
-      })
+      // Add GeoJSON overlay toggle control
+      const geoJSONToggle = new (class {
+        onAdd(map: mapboxgl.Map) {
+          this._map = map
+          this._container = document.createElement('div')
+          this._container.className = 'mapboxgl-ctrl mapboxgl-ctrl-group'
+
+          const button = document.createElement('button')
+          button.className = 'mapboxgl-ctrl-icon'
+          button.type = 'button'
+          button.title = 'Toggle Geographic Overlays'
+          button.innerHTML = '🗺️'
+          button.style.fontSize = '16px'
+          button.style.width = '29px'
+          button.style.height = '29px'
+          button.style.display = 'flex'
+          button.style.alignItems = 'center'
+          button.style.justifyContent = 'center'
+
+          button.addEventListener('click', () => {
+            setState(prev => ({ ...prev, showGeoJSONOverlay: !prev.showGeoJSONOverlay }))
+          })
+
+          this._container.appendChild(button)
+          return this._container
+        }
+
+        onRemove() {
+          this._container.parentNode?.removeChild(this._container)
+          this._map = undefined
+        }
+      })()
+
+      map.current.addControl(geoJSONToggle, 'top-right')
+
+        // Map event handlers
+        map.current.on('load', () => {
+          // Add boundary data source
+          if (map.current && boundaryConfig.geojson.features.length > 0) {
+            map.current.addSource('community-boundary', {
+              type: 'geojson',
+              data: boundaryConfig.geojson
+            })
+
+            // Add boundary fill layer
+            map.current.addLayer({
+              ...BOUNDARY_LAYER_CONFIG,
+              source: 'community-boundary'
+            })
+
+            // Add boundary outline layer
+            map.current.addLayer({
+              ...BOUNDARY_OUTLINE_LAYER_CONFIG,
+              source: 'community-boundary'
+            })
+          }
+
+          setState(prev => ({ ...prev, isLoaded: true }))
+          PerformanceTracker.endTiming('map-initialization')
+        })
 
       map.current.on('move', () => {
         if (onMapMove && map.current) {
@@ -127,13 +213,14 @@ export default function MapRoot({
         }
       })
 
-      // Error handling
-      map.current.on('error', (e) => {
-        ErrorTracker.logCustomError('Mapbox error', { error: e.error })
-      })
+        // Error handling
+        map.current.on('error', (e) => {
+          ErrorTracker.logCustomError('Mapbox error', { error: e.error })
+        })
 
-    } catch (error) {
-      ErrorTracker.logCustomError('Map initialization failed', { error })
+      } catch (error) {
+        ErrorTracker.logCustomError('Map initialization failed', { error })
+      }
     }
 
     // Cleanup
@@ -333,6 +420,15 @@ export default function MapRoot({
           onPinHover={handlePinHover}
           showClustering={true}
           clusterRadius={50}
+        />
+      )}
+
+      {/* GeoJSON Overlay */}
+      {map.current && (
+        <GeoJSONOverlay
+          map={map.current}
+          visible={state.showGeoJSONOverlay}
+          onToggle={() => setState(prev => ({ ...prev, showGeoJSONOverlay: !prev.showGeoJSONOverlay }))}
         />
       )}
 

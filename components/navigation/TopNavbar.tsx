@@ -12,7 +12,6 @@ interface TopNavbarProps {
   currentView: 'map' | 'social' | 'data'
   onViewChange: (view: 'map' | 'social' | 'data') => void
   onAddPin: () => void
-  onToggleSidebar: () => void
   searchQuery: string
   onSearchChange: (query: string) => void
 }
@@ -21,7 +20,6 @@ export default function TopNavbar({
   currentView,
   onViewChange,
   onAddPin,
-  onToggleSidebar,
   searchQuery,
   onSearchChange
 }: TopNavbarProps) {
@@ -45,16 +43,6 @@ export default function TopNavbar({
       <div className="flex items-center justify-between">
         {/* Left Section */}
         <div className="flex items-center space-x-4">
-          {/* Sidebar Toggle */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={onToggleSidebar}
-            className="lg:hidden"
-          >
-            <Menu className="w-5 h-5" />
-          </Button>
-
           {/* Logo */}
           <div className="flex items-center space-x-2">
             <div className="w-8 h-8 bg-silas-green rounded-lg flex items-center justify-center">

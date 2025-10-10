@@ -23,7 +23,7 @@ export type AuthorType = 'individual' | 'business' | 'group'
 // CATEGORY SYSTEM
 // ============================================================================
 
-export type CategoryKey = 'community' | 'faith' | 'projects' | 'economy' | 'events' | 'data_ai' | 'issues'
+export type CategoryKey = 'community' | 'projects' | 'events' | 'economy' | 'environment' | 'safety' | 'faith' | 'data_ai' | 'issues'
 
 export interface Category {
   key: CategoryKey
@@ -162,9 +162,14 @@ export interface PinProposal {
   reviewer_id?: UUID
   
   // Computed fields
-  proposer?: UserProfile
-  reviewer?: UserProfile
+  proposer?: Partial<UserProfile>
+  reviewer?: Partial<UserProfile>
   original_pin?: Pin
+  vote_count?: {
+    yes: number
+    no: number
+    abstain: number
+  }
 }
 
 // ============================================================================

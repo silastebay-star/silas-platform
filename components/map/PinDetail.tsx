@@ -1,33 +1,69 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { X, MapPin, Heart, MessageCircle, Share2, Calendar, User, Edit, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { usePinsStore, type Pin } from '@/store/pins'
 import { getCategoryColor } from '@/config/categories'
+import { CommentList } from '@/components/comments/CommentList'
+import { handleError } from '@/lib/error-handling'
 
 interface PinDetailProps {
-  pin: Pin
+  pinId: string
   isOpen: boolean
   onClose: () => void
 }
 
 // Use getCategoryColor instead of hardcoded colors
 
-export default function PinDetail({ pin, isOpen, onClose }: PinDetailProps) {
+export default function PinDetail({ pinId, isOpen, onClose }: PinDetailProps) {
   const { updatePin, deletePin } = usePinsStore()
-  const [isLiked, setIsLiked] = useState(false)
-  const [likesCount, setLikesCount] = useState(pin.likes || 0)
+  const [pin, setPin] = useState<Pin | null>(null)
+  const [censusData, setCensusData] = useState<any | null>(null)
+  const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    if (isOpen && pinId) {
+      const fetchPinAndCensusData = async () => {
+        setIsLoading(true)
+        try {
+          const pinResponse = await fetch(`/api/pins/${pinId}`)
+          if (!pinResponse.ok) {
+            const errorData = await pinResponse.json()
+            throw new Error(errorData.error || 'Failed to fetch pin details')
+          }
+          const pinData = await pinResponse.json()
+          setPin(pinData)
+
+          if (pinData.lat && pinData.lng) {
+            const censusResponse = await fetch(`/api/census-data?lat=${pinData.lat}&lng=${pinData.lng}`)
+            if (!censusResponse.ok) {
+              const errorData = await censusResponse.json()
+              throw new Error(errorData.error || 'Failed to fetch census data')
+            }
+            const census = await censusResponse.json()
+            setCensusData(census[0]) // Assuming it returns an array with one object
+          }
+        } catch (error: any) {
+          handleError(error, 'PinDetail - fetchPinAndCensusData', true)
+        } finally {
+          setIsLoading(false)
+        }
+      }
+      fetchPinAndCensusData()
+    }
+  }, [isOpen, pinId])
 
   if (!isOpen) return null
 
-  const handleLike = async () => {
-    const newLikesCount = isLiked ? likesCount - 1 : likesCount + 1
-    setIsLiked(!isLiked)
-    setLikesCount(newLikesCount)
-    
-    // Update in store/database
-    await updatePin(pin.id, { likes: newLikesCount })
+  if (isLoading || !pin) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg shadow-xl max-w-lg w-full h-96 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-silas-green"></div>
+        </div>
+      </div>
+    )
   }
 
   const handleShare = () => {
@@ -48,8 +84,12 @@ export default function PinDetail({ pin, isOpen, onClose }: PinDetailProps) {
 
   const handleDelete = async () => {
     if (confirm('Are you sure you want to delete this pin?')) {
-      await deletePin(pin.id)
-      onClose()
+      try {
+        await deletePin(pin.id)
+        onClose()
+      } catch (error: any) {
+        handleError(error, 'PinDetail - handleDelete', true)
+      }
     }
   }
 
@@ -85,11 +125,11 @@ export default function PinDetail({ pin, isOpen, onClose }: PinDetailProps) {
           ) : (
             <div 
               className="h-48 rounded-t-lg flex items-center justify-center"
-              style={{ backgroundColor: `${getCategoryColor(pin.type)}20` }}
+              style={{ backgroundColor: `${getCategoryColor(pin.categories[0] as CategoryKey)}20` }}
             >
               <MapPin 
                 className="w-16 h-16"
-                style={{ color: getCategoryColor(pin.type) }}
+                style={{ color: getCategoryColor(pin.categories[0] as CategoryKey) }}
               />
             </div>
           )}
@@ -106,21 +146,18 @@ export default function PinDetail({ pin, isOpen, onClose }: PinDetailProps) {
           <div className="absolute top-4 left-4">
             <span 
               className="inline-block px-3 py-1 rounded-full text-white text-sm font-medium"
-              style={{ backgroundColor: getCategoryColor(pin.type) }}
+              style={{ backgroundColor: getCategoryColor(pin.categories[0] as CategoryKey) }}
             >
-              {pin.type.charAt(0).toUpperCase() + pin.type.slice(1)}
+              {pin.categories[0].charAt(0).toUpperCase() + pin.categories[0].slice(1)}
             </span>
           </div>
         </div>
 
         {/* Content */}
         <div className="p-6">
-          {/* Title and Category */}
+          {/* Title */} 
           <div className="mb-4">
             <h2 className="text-xl font-bold text-gray-900 mb-1 font-heading">{pin.title}</h2>
-            {pin.category && (
-              <p className="text-sm text-gray-600">{pin.category}</p>
-            )}
           </div>
 
           {/* Description */}
@@ -135,7 +172,7 @@ export default function PinDetail({ pin, isOpen, onClose }: PinDetailProps) {
             <div className="flex items-center space-x-2 text-sm text-gray-600">
               <MapPin className="w-4 h-4" />
               <span>
-                {pin.lat.toFixed(6)}, {pin.lng.toFixed(6)}
+                {pin.lat?.toFixed(6)}, {pin.lng?.toFixed(6)}
               </span>
             </div>
           </div>
@@ -147,32 +184,26 @@ export default function PinDetail({ pin, isOpen, onClose }: PinDetailProps) {
               <span>Added {formatDate(pin.created_at)}</span>
             </div>
             
-            {pin.created_by && (
+            {pin.author_id && (
               <div className="flex items-center space-x-2 text-sm text-gray-600">
                 <User className="w-4 h-4" />
-                <span>By {pin.created_by}</span>
+                <span>By {pin.author_id}</span>
+              </div>
+            )}
+
+            {censusData && (
+              <div className="pt-4 border-t border-gray-200">
+                <h3 className="font-medium text-gray-900 mb-2 font-heading">Census Data</h3>
+                <p className="text-sm text-gray-700">LSOA Code: {censusData.lsoa_code}</p>
+                <p className="text-sm text-gray-700">Population: {censusData.population}</p>
+                <p className="text-sm text-gray-700">Deprivation Index: {censusData.deprivation_index?.toFixed(2)}</p>
               </div>
             )}
           </div>
 
-          {/* Social Actions */}
+          {/* Social Actions (Simplified) */}
           <div className="flex items-center justify-between py-4 border-t border-gray-200">
             <div className="flex items-center space-x-4">
-              <button
-                onClick={handleLike}
-                className={`flex items-center space-x-1 transition-colors ${
-                  isLiked ? 'text-red-500' : 'text-gray-500 hover:text-red-500'
-                }`}
-              >
-                <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-                <span className="text-sm font-medium">{likesCount}</span>
-              </button>
-
-              <button className="flex items-center space-x-1 text-gray-500 hover:text-blue-500 transition-colors">
-                <MessageCircle className="w-5 h-5" />
-                <span className="text-sm font-medium">{pin.comments || 0}</span>
-              </button>
-
               <button
                 onClick={handleShare}
                 className="flex items-center space-x-1 text-gray-500 hover:text-green-500 transition-colors"
@@ -208,41 +239,7 @@ export default function PinDetail({ pin, isOpen, onClose }: PinDetailProps) {
           {/* Comments Section */}
           <div className="pt-4 border-t border-gray-200">
             <h3 className="font-medium text-gray-900 mb-3 font-heading">Comments</h3>
-            
-            {/* Comment Input */}
-            <div className="mb-4">
-              <textarea
-                placeholder="Add a comment..."
-                className="w-full p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-silas-green focus:border-transparent"
-                rows={2}
-              />
-              <div className="flex justify-end mt-2">
-                <Button variant="default" size="sm" className="bg-silas-green hover:bg-silas-green/90">
-                  Post Comment
-                </Button>
-              </div>
-            </div>
-
-            {/* Comments List */}
-            <div className="space-y-3">
-              {/* Sample comment */}
-              <div className="flex space-x-3">
-                <div className="w-8 h-8 bg-gray-300 rounded-full flex items-center justify-center">
-                  <User className="w-4 h-4 text-gray-600" />
-                </div>
-                <div className="flex-1">
-                  <div className="bg-gray-50 rounded-lg p-3">
-                    <div className="flex items-center space-x-2 mb-1">
-                      <span className="font-medium text-sm text-gray-900">Community Member</span>
-                      <span className="text-xs text-gray-500">2 hours ago</span>
-                    </div>
-                    <p className="text-sm text-gray-700">
-                      This is a great addition to our community! Looking forward to seeing it develop.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <CommentList pinId={pin.id} />
           </div>
         </div>
       </div>

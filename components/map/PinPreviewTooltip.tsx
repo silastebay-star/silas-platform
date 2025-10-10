@@ -15,7 +15,8 @@ import {
   Users,
   Church,
   Database,
-  AlertTriangle
+  AlertTriangle,
+  Leaf
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -31,10 +32,12 @@ interface PinPreviewTooltipProps {
 // Category icon mapping
 const CATEGORY_ICONS: Record<CategoryKey, React.ComponentType<any>> = {
   community: Users,
-  faith: Church,
   projects: Building2,
-  economy: Building2,
   events: Calendar,
+  economy: Building2,
+  environment: Leaf,
+  safety: AlertTriangle,
+  faith: Church,
   data_ai: Database,
   issues: AlertTriangle
 }

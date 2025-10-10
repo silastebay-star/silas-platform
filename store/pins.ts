@@ -1,24 +1,24 @@
-'use client'
-
 import { create } from 'zustand'
-import { supabase } from '@/lib/supabase'
 import { CategoryKey } from '@/config/categories'
+import { validatePinLocation } from '@/lib/boundary-utils'
 
 export interface Pin {
   id: string
   title: string
   description?: string
-  lat: number
-  lng: number
-  type: CategoryKey
-  category?: string
-  photos?: string[]
+  geom: { type: 'Point', coordinates: [number, number] } // GeoJSON Point
+  categories: string[]
+  project_id?: string
+  group_id?: string
+  author_id: string
+  status: 'draft' | 'proposed' | 'published' | 'archived' | 'deleted'
   metadata?: Record<string, any>
   created_at: string
-  created_by?: string
-  likes?: number
-  comments?: number
-  status: 'active' | 'pending' | 'archived' | 'flagged'
+  updated_at: string
+
+  // Client-side computed fields
+  lat?: number
+  lng?: number
 }
 
 interface PinState {
@@ -30,13 +30,13 @@ interface PinState {
   // Actions
   setPins: (pins: Pin[]) => void
   setSelectedPin: (pin: Pin | null) => void
-  addPin: (pin: Omit<Pin, 'id' | 'created_at'>) => Promise<Pin | null>
+  addPin: (pinData: any) => Promise<Pin | null>
   updatePin: (id: string, updates: Partial<Pin>) => Promise<void>
   deletePin: (id: string) => Promise<void>
   fetchPins: () => Promise<void>
   
   // Utility
-  getPinsByType: (type: string) => Pin[]
+  getPinsByCategory: (category: CategoryKey) => Pin[]
   getPinsNearLocation: (lat: number, lng: number, radiusMeters: number) => Pin[]
 }
 
@@ -54,53 +54,20 @@ export const usePinsStore = create<PinState>((set, get) => ({
     set({ isLoading: true, error: null })
 
     try {
-      
-      const newPin = {
-        ...pinData,
-        id: crypto.randomUUID(),
-        created_at: new Date().toISOString(),
-        status: 'active' as const,
-        likes: 0,
-        comments: 0
-      }
-
-      // Check proximity (3m rule)
-      const { pins } = get()
-      const tooClose = pins.some(p => {
-        const distance = Math.sqrt(
-          Math.pow((p.lat - newPin.lat) * 111000, 2) + 
-          Math.pow((p.lng - newPin.lng) * 111000 * Math.cos(newPin.lat * Math.PI / 180), 2)
-        )
-        return distance < 3 // 3 meters
+      const response = await fetch('/api/pins', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(pinData),
       })
 
-      if (tooClose) {
-        set({ error: 'Pin too close to existing pin (3m minimum)', isLoading: false })
-        return null
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to add pin')
       }
 
-      // Save to Supabase
-      const { data, error } = await supabase
-        .from('pins')
-        .insert([{
-          id: newPin.id,
-          title: newPin.title,
-          description: newPin.description,
-          lat: newPin.lat,
-          lng: newPin.lng,
-          type: newPin.type,
-          category: newPin.category,
-          photos: newPin.photos || [],
-          metadata: newPin.metadata || {},
-          created_at: newPin.created_at,
-          created_by: newPin.created_by,
-          status: newPin.status
-        }])
-        .select()
-        .single()
+      const newPin = await response.json()
 
-      if (error) throw error
-
+      const { pins } = get()
       const updatedPins = [...pins, newPin]
       set({ pins: updatedPins, isLoading: false })
       return newPin
@@ -117,13 +84,18 @@ export const usePinsStore = create<PinState>((set, get) => ({
     set({ isLoading: true, error: null })
 
     try {
-      
-      const { error } = await supabase
-        .from('pins')
-        .update(updates)
-        .eq('id', id)
+      const response = await fetch(`/api/pins/${id}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(updates),
+        }
+      )
 
-      if (error) throw error
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to update pin')
+      }
 
       const { pins } = get()
       const updatedPins = pins.map(pin => 
@@ -143,13 +115,12 @@ export const usePinsStore = create<PinState>((set, get) => ({
     set({ isLoading: true, error: null })
 
     try {
-      
-      const { error } = await supabase
-        .from('pins')
-        .delete()
-        .eq('id', id)
+      const response = await fetch(`/api/pins/${id}`, { method: 'DELETE' })
 
-      if (error) throw error
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to delete pin')
+      }
 
       const { pins } = get()
       const updatedPins = pins.filter(pin => pin.id !== id)
@@ -167,31 +138,11 @@ export const usePinsStore = create<PinState>((set, get) => ({
     set({ isLoading: true, error: null })
 
     try {
-      
-      const { data, error } = await supabase
-        .from('pins')
-        .select('*')
-        .eq('status', 'active')
-        .order('created_at', { ascending: false })
-
-      if (error) throw error
-
-      const pins: Pin[] = (data || []).map(row => ({
-        id: row.id,
-        title: row.title,
-        description: row.description,
-        lat: row.lat,
-        lng: row.lng,
-        type: row.type,
-        category: row.category,
-        photos: row.photos || [],
-        metadata: row.metadata || {},
-        created_at: row.created_at,
-        created_by: row.created_by,
-        likes: row.likes || 0,
-        comments: row.comments || 0,
-        status: row.status
-      }))
+      const response = await fetch('/api/pins')
+      if (!response.ok) {
+        throw new Error('Failed to fetch pins')
+      }
+      const pins: Pin[] = await response.json()
 
       set({ pins, isLoading: false })
     } catch (error) {
@@ -202,9 +153,9 @@ export const usePinsStore = create<PinState>((set, get) => ({
     }
   },
 
-  getPinsByType: (type) => {
+  getPinsByCategory: (category: CategoryKey) => {
     const { pins } = get()
-    return pins.filter(pin => pin.type === type)
+    return pins.filter(pin => pin.categories.includes(category))
   },
 
   getPinsNearLocation: (lat, lng, radiusMeters) => {

@@ -117,7 +117,7 @@ export const useCommentsStore = create<CommentState>((set, get) => ({
     const optimisticComment: Comment = {
       id: tempId,
       pin_id: pinId,
-      user_id: 'current_user', // TODO: Get from auth
+      user_id: 'temp_user', // Will be replaced with real user ID
       parent_id: parentId,
       content,
       is_edited: false,
@@ -192,7 +192,7 @@ export const useCommentsStore = create<CommentState>((set, get) => ({
         .from('pin_comments')
         .insert([{
           pin_id: pinId,
-          user_id: 'current_user', // TODO: Get from auth
+          user_id: 'temp_user', // Will be replaced with real user ID
           parent_id: parentId,
           content
         }])
@@ -249,7 +249,8 @@ export const useCommentsStore = create<CommentState>((set, get) => ({
 
       if (error) throw error
 
-      // TODO: Update local state
+      // Update local state - simplified for now
+      // TODO: Implement proper local state update for comment editing
     } catch (error) {
       set({ 
         error: error instanceof Error ? error.message : 'Failed to update comment'

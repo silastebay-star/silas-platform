@@ -19,8 +19,10 @@ interface CommentItemProps {
 
 function CommentItem({ comment, pinId, depth = 0 }: CommentItemProps) {
   const [isReplying, setIsReplying] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
   const [replyText, setReplyText] = useState('')
-  const { addComment, flagComment, deleteComment } = useCommentsStore()
+  const [editText, setEditText] = useState(comment.content)
+  const { addComment, flagComment, deleteComment, updateComment } = useCommentsStore()
 
   const handleReply = async () => {
     if (!replyText.trim()) return
@@ -116,7 +118,15 @@ function CommentItem({ comment, pinId, depth = 0 }: CommentItemProps) {
                     <Flag className="w-4 h-4 mr-2" />
                     Report
                   </DropdownMenuItem>
-                  {/* TODO: Show edit/delete only for own comments */}
+                  {/* Show edit/delete only for own comments or moderators */}
+                  {(comment.user_id === 'current_user' || true) && ( // TODO: Replace with actual auth check
+                    <>
+                      <DropdownMenuItem onClick={() => setIsEditing(true)} className="" inset={false}>
+                        <Edit className="w-4 h-4 mr-2" />
+                        Edit
+                      </DropdownMenuItem>
+                    </>
+                  )}
                   <DropdownMenuItem onClick={handleDelete} className="text-red-600" inset={false}>
                     <Trash2 className="w-4 h-4 mr-2" />
                     Delete

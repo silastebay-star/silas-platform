@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from 'next'
 import { Inter, Orbitron } from 'next/font/google'
 import { ThemeProvider } from 'next-themes'
+import { Toaster } from 'sonner'
+import { AuthProvider } from '@/lib/auth/auth-context'
+import { RealtimeProvider } from '@/components/providers/realtime-provider'
 import './globals.css'
 
 const inter = Inter({ 
@@ -46,9 +49,27 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <div id="root" className="min-h-screen bg-background text-foreground">
-            {children}
-          </div>
+          <AuthProvider>
+            <RealtimeProvider>
+              <div id="root" className="min-h-screen bg-background text-foreground">
+                {children}
+              </div>
+              <Toaster
+                position="top-right"
+                expand={true}
+                richColors
+                closeButton
+                toastOptions={{
+                  duration: 4000,
+                  style: {
+                    background: 'hsl(var(--background))',
+                    color: 'hsl(var(--foreground))',
+                    border: '1px solid hsl(var(--border))',
+                  },
+                }}
+              />
+            </RealtimeProvider>
+          </AuthProvider>
         </ThemeProvider>
       </body>
     </html>

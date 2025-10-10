@@ -1,351 +1,304 @@
--- SILAS Row Level Security Policies
--- Comprehensive security for multi-role community platform
+-- Row Level Security Policies for SILAS Platform
+-- Comprehensive security policies for all tables
 
--- =============================================
--- ENABLE RLS ON ALL TABLES
--- =============================================
+-- Enable RLS on all tables
+ALTER TABLE public.users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.group_memberships ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pins ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pin_likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pin_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.comment_likes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.user_follows ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.pin_reports ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.activities ENABLE ROW LEVEL SECURITY;
 
-ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
-ALTER TABLE pins ENABLE ROW LEVEL SECURITY;
-ALTER TABLE projects ENABLE ROW LEVEL SECURITY;
-ALTER TABLE pin_reactions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE pin_comments ENABLE ROW LEVEL SECURITY;
-ALTER TABLE pin_shares ENABLE ROW LEVEL SECURITY;
-ALTER TABLE fund_ledger ENABLE ROW LEVEL SECURITY;
-ALTER TABLE polls ENABLE ROW LEVEL SECURITY;
-ALTER TABLE poll_options ENABLE ROW LEVEL SECURITY;
-ALTER TABLE poll_votes ENABLE ROW LEVEL SECURITY;
-ALTER TABLE events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ai_documents ENABLE ROW LEVEL SECURITY;
-ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
-
--- =============================================
--- HELPER FUNCTIONS
--- =============================================
-
--- Get user role
-CREATE OR REPLACE FUNCTION get_user_role(user_id UUID)
-RETURNS TEXT AS $$
-BEGIN
-  RETURN (
-    SELECT COALESCE(role, 'guest')
-    FROM user_profiles 
-    WHERE id = user_id
-  );
-END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
-
--- Check if user is admin
+-- Helper function to check if user is admin
 CREATE OR REPLACE FUNCTION is_admin(user_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
-  RETURN get_user_role(user_id) = 'admin';
+  RETURN EXISTS (
+    SELECT 1 FROM public.users 
+    WHERE id = user_id AND role = 'admin'
+  );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Check if user is verified
-CREATE OR REPLACE FUNCTION is_verified_user(user_id UUID)
+-- Helper function to check if user is moderator or admin
+CREATE OR REPLACE FUNCTION is_moderator_or_admin(user_id UUID)
 RETURNS BOOLEAN AS $$
 BEGIN
-  RETURN (
-    SELECT COALESCE(is_verified, false)
-    FROM user_profiles 
-    WHERE id = user_id
+  RETURN EXISTS (
+    SELECT 1 FROM public.users 
+    WHERE id = user_id AND role IN ('moderator', 'admin')
   );
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- =============================================
--- CATEGORIES POLICIES
--- =============================================
+-- Helper function to check group membership
+CREATE OR REPLACE FUNCTION is_group_member(user_id UUID, group_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.group_memberships 
+    WHERE user_id = is_group_member.user_id AND group_id = is_group_member.group_id
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Everyone can read categories
-CREATE POLICY "Categories are viewable by everyone" ON categories
-  FOR SELECT USING (true);
+-- Helper function to check group admin/moderator
+CREATE OR REPLACE FUNCTION is_group_admin_or_moderator(user_id UUID, group_id UUID)
+RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN EXISTS (
+    SELECT 1 FROM public.group_memberships 
+    WHERE user_id = is_group_admin_or_moderator.user_id 
+    AND group_id = is_group_admin_or_moderator.group_id 
+    AND role IN ('admin', 'moderator')
+  );
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Only admins can modify categories
-CREATE POLICY "Only admins can modify categories" ON categories
-  FOR ALL USING (is_admin(auth.uid()));
+-- Users table policies
+CREATE POLICY "Users can view all active users" ON public.users
+  FOR SELECT USING (is_active = true);
 
--- =============================================
--- PINS POLICIES
--- =============================================
+CREATE POLICY "Users can update their own profile" ON public.users
+  FOR UPDATE USING (auth.uid() = id);
 
--- Public pins are viewable by everyone
-CREATE POLICY "Public pins are viewable by everyone" ON pins
+CREATE POLICY "Admins can update any user" ON public.users
+  FOR UPDATE USING (is_admin(auth.uid()));
+
+CREATE POLICY "Users can insert their own profile" ON public.users
+  FOR INSERT WITH CHECK (auth.uid() = id);
+
+-- Groups table policies
+CREATE POLICY "Anyone can view public groups" ON public.groups
+  FOR SELECT USING (is_public = true);
+
+CREATE POLICY "Group members can view private groups" ON public.groups
   FOR SELECT USING (
-    social_visibility = 'public' 
-    OR (social_visibility = 'members' AND auth.uid() IS NOT NULL)
-    OR created_by = auth.uid()
-    OR is_admin(auth.uid())
+    NOT is_public AND is_group_member(auth.uid(), id)
   );
 
--- Authenticated users can create pins
-CREATE POLICY "Authenticated users can create pins" ON pins
-  FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL 
-    AND created_by = auth.uid()
-  );
+CREATE POLICY "Authenticated users can create groups" ON public.groups
+  FOR INSERT WITH CHECK (auth.uid() IS NOT NULL);
 
--- Users can update their own pins, admins can update any
-CREATE POLICY "Users can update own pins, admins can update any" ON pins
+CREATE POLICY "Group admins can update groups" ON public.groups
   FOR UPDATE USING (
-    created_by = auth.uid() 
-    OR is_admin(auth.uid())
+    is_group_admin_or_moderator(auth.uid(), id) OR is_admin(auth.uid())
   );
 
--- Users can delete their own pins, admins can delete any
-CREATE POLICY "Users can delete own pins, admins can delete any" ON pins
+CREATE POLICY "Group admins can delete groups" ON public.groups
   FOR DELETE USING (
-    created_by = auth.uid() 
-    OR is_admin(auth.uid())
+    is_group_admin_or_moderator(auth.uid(), id) OR is_admin(auth.uid())
   );
 
--- =============================================
--- PROJECTS POLICIES
--- =============================================
-
--- Projects follow pin visibility
-CREATE POLICY "Projects follow pin visibility" ON projects
+-- Group memberships policies
+CREATE POLICY "Users can view group memberships" ON public.group_memberships
   FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM pins 
-      WHERE pins.id = projects.pin_id 
-      AND (
-        pins.social_visibility = 'public' 
-        OR (pins.social_visibility = 'members' AND auth.uid() IS NOT NULL)
-        OR pins.created_by = auth.uid()
-        OR is_admin(auth.uid())
-      )
-    )
+    -- Can see own memberships
+    user_id = auth.uid() OR
+    -- Can see memberships of public groups
+    EXISTS (SELECT 1 FROM public.groups WHERE id = group_id AND is_public = true) OR
+    -- Group members can see other memberships
+    is_group_member(auth.uid(), group_id)
   );
 
--- Project creators and admins can modify
-CREATE POLICY "Project creators and admins can modify projects" ON projects
+CREATE POLICY "Users can join public groups" ON public.group_memberships
+  FOR INSERT WITH CHECK (
+    user_id = auth.uid() AND
+    EXISTS (SELECT 1 FROM public.groups WHERE id = group_id AND is_public = true)
+  );
+
+CREATE POLICY "Group admins can manage memberships" ON public.group_memberships
   FOR ALL USING (
-    created_by = auth.uid() 
-    OR is_admin(auth.uid())
+    is_group_admin_or_moderator(auth.uid(), group_id) OR is_admin(auth.uid())
   );
 
--- =============================================
--- SOCIAL INTERACTION POLICIES
--- =============================================
+CREATE POLICY "Users can leave groups" ON public.group_memberships
+  FOR DELETE USING (user_id = auth.uid());
 
--- Pin reactions: users can read all, create/update/delete their own
-CREATE POLICY "Users can view all reactions" ON pin_reactions
+-- Pins table policies
+CREATE POLICY "Anyone can view active pins" ON public.pins
+  FOR SELECT USING (status = 'active');
+
+CREATE POLICY "Moderators can view all pins" ON public.pins
+  FOR SELECT USING (is_moderator_or_admin(auth.uid()));
+
+CREATE POLICY "Authenticated users can create pins" ON public.pins
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND
+    created_by = auth.uid() AND
+    (group_id IS NULL OR is_group_member(auth.uid(), group_id))
+  );
+
+CREATE POLICY "Pin creators can update their pins" ON public.pins
+  FOR UPDATE USING (created_by = auth.uid());
+
+CREATE POLICY "Group moderators can update group pins" ON public.pins
+  FOR UPDATE USING (
+    group_id IS NOT NULL AND 
+    is_group_admin_or_moderator(auth.uid(), group_id)
+  );
+
+CREATE POLICY "Moderators can update any pin" ON public.pins
+  FOR UPDATE USING (is_moderator_or_admin(auth.uid()));
+
+CREATE POLICY "Pin creators can delete their pins" ON public.pins
+  FOR DELETE USING (created_by = auth.uid());
+
+CREATE POLICY "Moderators can delete any pin" ON public.pins
+  FOR DELETE USING (is_moderator_or_admin(auth.uid()));
+
+-- Pin likes policies
+CREATE POLICY "Anyone can view pin likes" ON public.pin_likes
   FOR SELECT USING (true);
 
-CREATE POLICY "Users can manage their own reactions" ON pin_reactions
-  FOR ALL USING (user_id = auth.uid());
+CREATE POLICY "Authenticated users can like pins" ON public.pin_likes
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND user_id = auth.uid()
+  );
 
--- Pin comments: follow pin visibility for reading
-CREATE POLICY "Comments follow pin visibility" ON pin_comments
+CREATE POLICY "Users can unlike their own likes" ON public.pin_likes
+  FOR DELETE USING (user_id = auth.uid());
+
+-- Pin comments policies
+CREATE POLICY "Anyone can view comments on active pins" ON public.pin_comments
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM public.pins WHERE id = pin_id AND status = 'active')
+  );
+
+CREATE POLICY "Authenticated users can comment" ON public.pin_comments
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND 
+    user_id = auth.uid() AND
+    EXISTS (SELECT 1 FROM public.pins WHERE id = pin_id AND status = 'active')
+  );
+
+CREATE POLICY "Comment authors can update their comments" ON public.pin_comments
+  FOR UPDATE USING (user_id = auth.uid());
+
+CREATE POLICY "Comment authors can delete their comments" ON public.pin_comments
+  FOR DELETE USING (user_id = auth.uid());
+
+CREATE POLICY "Moderators can manage any comment" ON public.pin_comments
+  FOR ALL USING (is_moderator_or_admin(auth.uid()));
+
+-- Comment likes policies
+CREATE POLICY "Anyone can view comment likes" ON public.comment_likes
+  FOR SELECT USING (true);
+
+CREATE POLICY "Authenticated users can like comments" ON public.comment_likes
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND user_id = auth.uid()
+  );
+
+CREATE POLICY "Users can unlike their comment likes" ON public.comment_likes
+  FOR DELETE USING (user_id = auth.uid());
+
+-- Notifications policies
+CREATE POLICY "Users can view their own notifications" ON public.notifications
+  FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY "System can create notifications" ON public.notifications
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Users can update their own notifications" ON public.notifications
+  FOR UPDATE USING (user_id = auth.uid());
+
+CREATE POLICY "Users can delete their own notifications" ON public.notifications
+  FOR DELETE USING (user_id = auth.uid());
+
+-- User follows policies
+CREATE POLICY "Anyone can view follows" ON public.user_follows
+  FOR SELECT USING (true);
+
+CREATE POLICY "Users can follow others" ON public.user_follows
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND follower_id = auth.uid()
+  );
+
+CREATE POLICY "Users can unfollow" ON public.user_follows
+  FOR DELETE USING (follower_id = auth.uid());
+
+-- Pin reports policies
+CREATE POLICY "Authenticated users can report pins" ON public.pin_reports
+  FOR INSERT WITH CHECK (
+    auth.uid() IS NOT NULL AND reported_by = auth.uid()
+  );
+
+CREATE POLICY "Moderators can view all reports" ON public.pin_reports
+  FOR SELECT USING (is_moderator_or_admin(auth.uid()));
+
+CREATE POLICY "Moderators can update reports" ON public.pin_reports
+  FOR UPDATE USING (is_moderator_or_admin(auth.uid()));
+
+-- Activities policies
+CREATE POLICY "Users can view their own activities" ON public.activities
+  FOR SELECT USING (user_id = auth.uid());
+
+CREATE POLICY "Users can view activities of people they follow" ON public.activities
   FOR SELECT USING (
     EXISTS (
-      SELECT 1 FROM pins 
-      WHERE pins.id = pin_comments.pin_id 
-      AND (
-        pins.social_visibility = 'public' 
-        OR (pins.social_visibility = 'members' AND auth.uid() IS NOT NULL)
-        OR pins.created_by = auth.uid()
-        OR is_admin(auth.uid())
-      )
+      SELECT 1 FROM public.user_follows 
+      WHERE follower_id = auth.uid() AND following_id = user_id
     )
   );
 
--- Authenticated users can create comments
-CREATE POLICY "Authenticated users can create comments" ON pin_comments
-  FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL 
-    AND user_id = auth.uid()
-  );
+CREATE POLICY "System can create activities" ON public.activities
+  FOR INSERT WITH CHECK (true);
 
--- Users can update/delete their own comments, admins can moderate
-CREATE POLICY "Users can manage own comments, admins can moderate" ON pin_comments
-  FOR UPDATE USING (
-    user_id = auth.uid() 
-    OR is_admin(auth.uid())
-  );
-
-CREATE POLICY "Users can delete own comments, admins can moderate" ON pin_comments
-  FOR DELETE USING (
-    user_id = auth.uid() 
-    OR is_admin(auth.uid())
-  );
-
--- Pin shares: users can create their own
-CREATE POLICY "Users can create shares" ON pin_shares
-  FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL 
-    AND user_id = auth.uid()
-  );
-
-CREATE POLICY "Users can view shares" ON pin_shares
-  FOR SELECT USING (true);
-
--- =============================================
--- FUND SYSTEM POLICIES
--- =============================================
-
--- Fund ledger: admins can manage, users can view public entries
-CREATE POLICY "Fund ledger visibility" ON fund_ledger
-  FOR SELECT USING (
-    is_admin(auth.uid())
-    OR transaction_type IN ('contribution', 'allocation')
-  );
-
--- Only admins can modify fund ledger
-CREATE POLICY "Only admins can modify fund ledger" ON fund_ledger
-  FOR ALL USING (is_admin(auth.uid()));
-
--- =============================================
--- VOTING SYSTEM POLICIES
--- =============================================
-
--- Polls: public polls viewable by all, others by members
-CREATE POLICY "Poll visibility" ON polls
-  FOR SELECT USING (
-    status = 'active'
-    AND (
-      category_id IS NULL 
-      OR auth.uid() IS NOT NULL
-      OR is_admin(auth.uid())
-    )
-  );
-
--- Verified users and admins can create polls
-CREATE POLICY "Verified users can create polls" ON polls
-  FOR INSERT WITH CHECK (
-    (is_verified_user(auth.uid()) OR is_admin(auth.uid()))
-    AND created_by = auth.uid()
-  );
-
--- Poll creators and admins can modify
-CREATE POLICY "Poll creators and admins can modify polls" ON polls
-  FOR UPDATE USING (
-    created_by = auth.uid() 
-    OR is_admin(auth.uid())
-  );
-
--- Poll options follow poll visibility
-CREATE POLICY "Poll options follow poll visibility" ON poll_options
-  FOR SELECT USING (
-    EXISTS (
-      SELECT 1 FROM polls 
-      WHERE polls.id = poll_options.poll_id 
-      AND polls.status = 'active'
-    )
-  );
-
--- Poll votes: users can create their own, view aggregated results
-CREATE POLICY "Users can vote in active polls" ON poll_votes
-  FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL 
-    AND user_id = auth.uid()
-    AND EXISTS (
-      SELECT 1 FROM polls 
-      WHERE polls.id = poll_id 
-      AND polls.status = 'active'
-      AND (polls.end_date IS NULL OR polls.end_date > NOW())
-    )
-  );
-
--- Users can view their own votes, admins can view all
-CREATE POLICY "Vote visibility" ON poll_votes
-  FOR SELECT USING (
-    user_id = auth.uid() 
-    OR is_admin(auth.uid())
-  );
-
--- =============================================
--- EVENTS POLICIES
--- =============================================
-
--- Public events viewable by all, private by members
-CREATE POLICY "Event visibility" ON events
-  FOR SELECT USING (
-    is_public = true 
-    OR auth.uid() IS NOT NULL
-    OR created_by = auth.uid()
-    OR is_admin(auth.uid())
-  );
-
--- Authenticated users can create events
-CREATE POLICY "Authenticated users can create events" ON events
-  FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL 
-    AND created_by = auth.uid()
-  );
-
--- Event creators and admins can modify
-CREATE POLICY "Event creators and admins can modify events" ON events
-  FOR UPDATE USING (
-    created_by = auth.uid() 
-    OR is_admin(auth.uid())
-  );
-
--- =============================================
--- AI DOCUMENTS POLICIES
--- =============================================
-
--- Public AI documents viewable by all
-CREATE POLICY "Public AI documents are viewable" ON ai_documents
-  FOR SELECT USING (
-    is_public = true 
-    OR auth.uid() IS NOT NULL
-  );
-
--- Only admins can modify AI documents
-CREATE POLICY "Only admins can modify AI documents" ON ai_documents
-  FOR ALL USING (is_admin(auth.uid()));
-
--- =============================================
--- USER PROFILES POLICIES
--- =============================================
-
--- Users can view all public profiles
-CREATE POLICY "Public profiles are viewable" ON user_profiles
-  FOR SELECT USING (true);
-
--- Users can manage their own profile
-CREATE POLICY "Users can manage own profile" ON user_profiles
-  FOR ALL USING (id = auth.uid());
-
--- Admins can view and modify any profile
-CREATE POLICY "Admins can manage any profile" ON user_profiles
-  FOR ALL USING (is_admin(auth.uid()));
-
--- =============================================
--- FUNCTIONS FOR SOCIAL COUNTS
--- =============================================
-
--- Get reaction counts for a pin
-CREATE OR REPLACE FUNCTION get_pin_reaction_counts(pin_uuid UUID)
-RETURNS JSONB AS $$
+-- Create function to handle new user registration
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
 BEGIN
-  RETURN (
-    SELECT COALESCE(
-      jsonb_object_agg(reaction_type, count), 
-      '{}'::jsonb
-    )
-    FROM (
-      SELECT reaction_type, COUNT(*)::int as count
-      FROM pin_reactions 
-      WHERE pin_id = pin_uuid
-      GROUP BY reaction_type
-    ) counts
-  );
+  INSERT INTO public.users (id, email, full_name)
+  VALUES (NEW.id, NEW.email, NEW.raw_user_meta_data->>'full_name');
+  RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
--- Get comment count for a pin
-CREATE OR REPLACE FUNCTION get_pin_comment_count(pin_uuid UUID)
-RETURNS INTEGER AS $$
+-- Trigger for new user registration
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- Create function to create activity entries
+CREATE OR REPLACE FUNCTION create_activity(
+  user_id UUID,
+  activity_type TEXT,
+  activity_data JSONB DEFAULT '{}'
+)
+RETURNS UUID AS $$
+DECLARE
+  activity_id UUID;
 BEGIN
-  RETURN (
-    SELECT COUNT(*)::int
-    FROM pin_comments 
-    WHERE pin_id = pin_uuid
-  );
+  INSERT INTO public.activities (user_id, type, data)
+  VALUES (user_id, activity_type, activity_data)
+  RETURNING id INTO activity_id;
+
+  RETURN activity_id;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- Create function to send notification
+CREATE OR REPLACE FUNCTION create_notification(
+  target_user_id UUID,
+  notification_type notification_type,
+  title TEXT,
+  message TEXT DEFAULT NULL,
+  data JSONB DEFAULT '{}'
+)
+RETURNS UUID AS $$
+DECLARE
+  notification_id UUID;
+BEGIN
+  INSERT INTO public.notifications (user_id, type, title, message, data)
+  VALUES (target_user_id, notification_type, title, message, data)
+  RETURNING id INTO notification_id;
+
+  RETURN notification_id;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

@@ -22,10 +22,12 @@ export function useCategoryFilter() {
   const categoryStats = useMemo(() => {
     const stats: Record<CategoryKey, number> = {
       community: 0,
-      faith: 0,
       projects: 0,
-      economy: 0,
       events: 0,
+      economy: 0,
+      environment: 0,
+      safety: 0,
+      faith: 0,
       data_ai: 0,
       issues: 0
     }

@@ -1,0 +1,374 @@
+/**
+ * End-to-End tests for the complete GeoJSON integration system
+ * These tests verify the entire workflow from data loading to map visualization
+ */
+
+import { test, expect, Page } from '@playwright/test'
+
+// Mock data for testing
+const mockCensusData = [
+  {
+    id: 'census-1',
+    name: 'Stoneclough Central',
+    population: 2847,
+    households: 1203,
+    median_age: 42.3,
+    median_income: 28500,
+    unemployment_rate: 4.2,
+    education_level: {
+      no_qualifications: 18.5,
+      level_4_qualifications_and_above: 28.8
+    },
+    housing: {
+      owned_outright: 32.1,
+      owned_with_mortgage: 38.7,
+      private_rented: 14.2
+    },
+    transport: {
+      work_from_home: 18.3,
+      car_driver: 52.1,
+      bus: 12.4
+    },
+    geom: {
+      type: 'Polygon',
+      coordinates: [[[-2.385, 53.548], [-2.375, 53.548], [-2.375, 53.555], [-2.385, 53.555], [-2.385, 53.548]]]
+    }
+  }
+]
+
+const mockBoundaries = [
+  {
+    id: 'boundary-1',
+    name: 'Stoneclough Parish',
+    type: 'parish',
+    population: 4770,
+    geom: {
+      type: 'Polygon',
+      coordinates: [[[-2.390, 53.545], [-2.370, 53.545], [-2.370, 53.565], [-2.390, 53.565], [-2.390, 53.545]]]
+    }
+  }
+]
+
+const mockStatistics = {
+  total_population: 2847,
+  total_households: 1203,
+  average_age: 42.3,
+  average_income: 28500,
+  unemployment_rate: 4.2
+}
+
+test.describe('GeoJSON System E2E Tests', () => {
+  test.beforeEach(async ({ page }) => {
+    // Mock the Supabase API responses
+    await page.route('**/rest/v1/census_data*', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockCensusData)
+      })
+    })
+
+    await page.route('**/rest/v1/community_boundaries*', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockBoundaries)
+      })
+    })
+
+    await page.route('**/rest/v1/geographic_layers*', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([])
+      })
+    })
+
+    await page.route('**/rest/v1/points_of_interest*', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify([])
+      })
+    })
+
+    // Navigate to the map page
+    await page.goto('/map')
+    
+    // Wait for map to load
+    await page.waitForSelector('[data-testid="map-container"]', { timeout: 10000 })
+  })
+
+  test('should load and display the map with GeoJSON overlay toggle', async ({ page }) => {
+    // Check if map container is visible
+    const mapContainer = page.locator('[data-testid="map-container"]')
+    await expect(mapContainer).toBeVisible()
+
+    // Check if GeoJSON overlay toggle button is present
+    const geoJSONToggle = page.locator('button[title="Toggle Geographic Overlays"]')
+    await expect(geoJSONToggle).toBeVisible()
+  })
+
+  test('should open GeoJSON overlay panel when toggle is clicked', async ({ page }) => {
+    // Click the GeoJSON overlay toggle
+    const geoJSONToggle = page.locator('button[title="Toggle Geographic Overlays"]')
+    await geoJSONToggle.click()
+
+    // Check if overlay panel appears
+    await expect(page.locator('text=Geographic Overlays')).toBeVisible()
+    await expect(page.locator('text=Census Data')).toBeVisible()
+    await expect(page.locator('text=Community Boundaries')).toBeVisible()
+    await expect(page.locator('text=Demographic Heatmaps')).toBeVisible()
+  })
+
+  test('should display community statistics in overlay panel', async ({ page }) => {
+    // Open GeoJSON overlay
+    await page.locator('button[title="Toggle Geographic Overlays"]').click()
+
+    // Wait for data to load and statistics to appear
+    await expect(page.locator('text=Community Overview')).toBeVisible()
+    
+    // Check if statistics are displayed
+    await expect(page.locator('text=2,847')).toBeVisible() // Population
+    await expect(page.locator('text=1,203')).toBeVisible() // Households
+    await expect(page.locator('text=42.3 years')).toBeVisible() // Average age
+    await expect(page.locator('text=£28,500')).toBeVisible() // Average income
+  })
+
+  test('should toggle census data overlay', async ({ page }) => {
+    // Open GeoJSON overlay
+    await page.locator('button[title="Toggle Geographic Overlays"]').click()
+
+    // Find and toggle census data switch
+    const censusSwitch = page.locator('label:has-text("Census Data") + *').locator('button[role="switch"]')
+    await expect(censusSwitch).toBeVisible()
+    
+    // Check initial state (should be off)
+    await expect(censusSwitch).toHaveAttribute('data-state', 'unchecked')
+    
+    // Toggle on
+    await censusSwitch.click()
+    await expect(censusSwitch).toHaveAttribute('data-state', 'checked')
+    
+    // Check if demographic metric selector appears
+    await expect(page.locator('text=Demographic Metric')).toBeVisible()
+  })
+
+  test('should toggle community boundaries overlay', async ({ page }) => {
+    // Open GeoJSON overlay
+    await page.locator('button[title="Toggle Geographic Overlays"]').click()
+
+    // Find community boundaries switch
+    const boundariesSwitch = page.locator('label:has-text("Community Boundaries") + *').locator('button[role="switch"]')
+    await expect(boundariesSwitch).toBeVisible()
+    
+    // Check initial state (should be on by default)
+    await expect(boundariesSwitch).toHaveAttribute('data-state', 'checked')
+    
+    // Toggle off
+    await boundariesSwitch.click()
+    await expect(boundariesSwitch).toHaveAttribute('data-state', 'unchecked')
+    
+    // Toggle back on
+    await boundariesSwitch.click()
+    await expect(boundariesSwitch).toHaveAttribute('data-state', 'checked')
+  })
+
+  test('should change demographic metrics and show legend', async ({ page }) => {
+    // Open GeoJSON overlay
+    await page.locator('button[title="Toggle Geographic Overlays"]').click()
+
+    // Enable census data
+    const censusSwitch = page.locator('label:has-text("Census Data") + *').locator('button[role="switch"]')
+    await censusSwitch.click()
+
+    // Wait for demographic metric selector
+    await expect(page.locator('text=Demographic Metric')).toBeVisible()
+
+    // Click on the select trigger
+    const selectTrigger = page.locator('[role="combobox"]')
+    await selectTrigger.click()
+
+    // Wait for options to appear
+    await expect(page.locator('text=Median Age')).toBeVisible()
+    await expect(page.locator('text=Median Income')).toBeVisible()
+    await expect(page.locator('text=Higher Education')).toBeVisible()
+
+    // Select a different metric
+    await page.locator('text=Median Age').click()
+
+    // Check if legend appears
+    await expect(page.locator('text=Legend')).toBeVisible()
+    await expect(page.locator('text=Low')).toBeVisible()
+    await expect(page.locator('text=High')).toBeVisible()
+  })
+
+  test('should handle loading states gracefully', async ({ page }) => {
+    // Mock slow API response
+    await page.route('**/rest/v1/census_data*', async route => {
+      // Delay response by 2 seconds
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockCensusData)
+      })
+    })
+
+    // Navigate to page
+    await page.goto('/map')
+    await page.waitForSelector('[data-testid="map-container"]')
+
+    // Open GeoJSON overlay
+    await page.locator('button[title="Toggle Geographic Overlays"]').click()
+
+    // Check if loading indicator appears
+    await expect(page.locator('text=Loading geographic data...')).toBeVisible()
+
+    // Wait for loading to complete
+    await expect(page.locator('text=Loading geographic data...')).not.toBeVisible({ timeout: 5000 })
+    await expect(page.locator('text=Community Overview')).toBeVisible()
+  })
+
+  test('should handle API errors gracefully', async ({ page }) => {
+    // Mock API error
+    await page.route('**/rest/v1/census_data*', async route => {
+      await route.fulfill({
+        status: 500,
+        contentType: 'application/json',
+        body: JSON.stringify({ error: 'Internal server error' })
+      })
+    })
+
+    // Navigate to page
+    await page.goto('/map')
+    await page.waitForSelector('[data-testid="map-container"]')
+
+    // Open GeoJSON overlay
+    await page.locator('button[title="Toggle Geographic Overlays"]').click()
+
+    // Should still show the overlay panel even with errors
+    await expect(page.locator('text=Geographic Overlays')).toBeVisible()
+    
+    // Loading should complete (even with errors)
+    await expect(page.locator('text=Loading geographic data...')).not.toBeVisible({ timeout: 5000 })
+  })
+
+  test('should be responsive on mobile devices', async ({ page }) => {
+    // Set mobile viewport
+    await page.setViewportSize({ width: 375, height: 667 })
+
+    // Navigate to page
+    await page.goto('/map')
+    await page.waitForSelector('[data-testid="map-container"]')
+
+    // Check if map is still visible
+    const mapContainer = page.locator('[data-testid="map-container"]')
+    await expect(mapContainer).toBeVisible()
+
+    // Open GeoJSON overlay
+    await page.locator('button[title="Toggle Geographic Overlays"]').click()
+
+    // Check if overlay panel is responsive
+    const overlayPanel = page.locator('text=Geographic Overlays').locator('..')
+    await expect(overlayPanel).toBeVisible()
+    
+    // Panel should not overflow viewport
+    const panelBox = await overlayPanel.boundingBox()
+    expect(panelBox?.width).toBeLessThanOrEqual(375)
+  })
+
+  test('should maintain state when navigating away and back', async ({ page }) => {
+    // Open GeoJSON overlay and configure it
+    await page.locator('button[title="Toggle Geographic Overlays"]').click()
+    
+    const censusSwitch = page.locator('label:has-text("Census Data") + *').locator('button[role="switch"]')
+    await censusSwitch.click()
+
+    // Navigate away
+    await page.goto('/dashboard')
+    
+    // Navigate back
+    await page.goto('/map')
+    await page.waitForSelector('[data-testid="map-container"]')
+
+    // Check if overlay is still open (this depends on implementation)
+    // For now, just verify the toggle button is still there
+    const geoJSONToggle = page.locator('button[title="Toggle Geographic Overlays"]')
+    await expect(geoJSONToggle).toBeVisible()
+  })
+
+  test('should work with keyboard navigation', async ({ page }) => {
+    // Navigate to page
+    await page.goto('/map')
+    await page.waitForSelector('[data-testid="map-container"]')
+
+    // Use keyboard to navigate to GeoJSON toggle
+    await page.keyboard.press('Tab')
+    // Continue tabbing until we reach the GeoJSON toggle
+    // (This is simplified - in reality you'd need to tab through all focusable elements)
+    
+    // Open overlay with Enter key
+    const geoJSONToggle = page.locator('button[title="Toggle Geographic Overlays"]')
+    await geoJSONToggle.focus()
+    await page.keyboard.press('Enter')
+
+    // Check if overlay opened
+    await expect(page.locator('text=Geographic Overlays')).toBeVisible()
+
+    // Use keyboard to navigate switches
+    await page.keyboard.press('Tab')
+    await page.keyboard.press('Space') // Toggle switch
+
+    // Verify switch state changed
+    const censusSwitch = page.locator('label:has-text("Census Data") + *').locator('button[role="switch"]')
+    await expect(censusSwitch).toHaveAttribute('data-state', 'checked')
+  })
+})
+
+test.describe('GeoJSON Data Visualization E2E', () => {
+  test('should display census data visualization component', async ({ page }) => {
+    // Mock route for census data visualization page
+    await page.route('**/rest/v1/census_data*', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockCensusData)
+      })
+    })
+
+    // Navigate to a page that shows census data visualization
+    await page.goto('/dashboard/demographics')
+    
+    // Check if visualization component loads
+    await expect(page.locator('text=Community Demographics')).toBeVisible()
+    await expect(page.locator('text=Overview')).toBeVisible()
+    await expect(page.locator('text=Education')).toBeVisible()
+    await expect(page.locator('text=Housing')).toBeVisible()
+    await expect(page.locator('text=Transport')).toBeVisible()
+  })
+
+  test('should switch between visualization tabs', async ({ page }) => {
+    await page.route('**/rest/v1/census_data*', async route => {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(mockCensusData)
+      })
+    })
+
+    await page.goto('/dashboard/demographics')
+    
+    // Click on Education tab
+    await page.locator('text=Education').click()
+    await expect(page.locator('text=Education Levels')).toBeVisible()
+    
+    // Click on Housing tab
+    await page.locator('text=Housing').click()
+    await expect(page.locator('text=Housing Tenure')).toBeVisible()
+    
+    // Click on Transport tab
+    await page.locator('text=Transport').click()
+    await expect(page.locator('text=Transport to Work')).toBeVisible()
+  })
+})

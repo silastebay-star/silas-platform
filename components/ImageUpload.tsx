@@ -4,6 +4,8 @@ import { useState, useCallback, useRef } from 'react'
 import { Upload, X, Image as ImageIcon, AlertCircle, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase } from '@/lib/supabase'
+import { handleError } from '@/lib/error-handling'
+import Image from 'next/image'
 
 interface ImageFile {
   id: string
@@ -22,6 +24,7 @@ interface ImageUploadProps {
   acceptedTypes?: string[]
   existingImages?: string[]
   disabled?: boolean
+  authorId: string // New prop for author ID
 }
 
 export default function ImageUpload({
@@ -30,7 +33,8 @@ export default function ImageUpload({
   maxSizeBytes = 5 * 1024 * 1024, // 5MB
   acceptedTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'],
   existingImages = [],
-  disabled = false
+  disabled = false,
+  authorId
 }: ImageUploadProps) {
   const [images, setImages] = useState<ImageFile[]>([])
   const [isDragOver, setIsDragOver] = useState(false)
@@ -61,7 +65,7 @@ export default function ImageUpload({
   // Upload file to Supabase Storage
   const uploadFile = async (imageFile: ImageFile): Promise<string> => {
     const fileName = generateFileName(imageFile.file)
-    const filePath = `${Date.now()}/${fileName}` // Use timestamp as folder for organization
+    const filePath = `${authorId}/${Date.now()}/${fileName}` // Use authorId as folder for organization
     
     const { data, error } = await supabase.storage
       .from('pin-photos')
@@ -71,7 +75,7 @@ export default function ImageUpload({
       })
 
     if (error) {
-      throw new Error(error.message)
+      throw handleError(error, 'ImageUpload - uploadFile', false) // Don't show toast here, handled by component
     }
 
     // Get public URL
@@ -88,7 +92,7 @@ export default function ImageUpload({
     const totalImages = images.length + existingImages.length + fileArray.length
     
     if (totalImages > maxImages) {
-      alert(`Maximum ${maxImages} images allowed`)
+      handleError(`Maximum ${maxImages} images allowed`, 'ImageUpload - handleFiles', true)
       return
     }
 
@@ -134,7 +138,7 @@ export default function ImageUpload({
             return current
           })
 
-        } catch (error) {
+        } catch (error: any) {
           setImages(prev => prev.map(img => 
             img.id === imageFile.id 
               ? { 
@@ -144,10 +148,11 @@ export default function ImageUpload({
                 }
               : img
           ))
+          handleError(error, 'ImageUpload - uploadFile catch', true)
         }
       }
     })
-  }, [images, existingImages, maxImages, onImagesChange])
+  }, [images, existingImages, maxImages, onImagesChange, authorId])
 
   // Handle drag and drop
   const handleDragOver = useCallback((e: React.DragEvent) => {
@@ -256,10 +261,11 @@ export default function ImageUpload({
           {existingImages.map((url, index) => (
             <div key={`existing-${index}`} className="relative group">
               <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                <img
+                <Image
                   src={url}
                   alt={`Existing image ${index + 1}`}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
                 />
               </div>
               {!disabled && (
@@ -283,10 +289,11 @@ export default function ImageUpload({
           {images.map((image) => (
             <div key={image.id} className="relative group">
               <div className="aspect-square bg-gray-100 rounded-lg overflow-hidden">
-                <img
+                <Image
                   src={image.preview}
                   alt="Upload preview"
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
                 />
                 
                 {/* Status Overlay */}

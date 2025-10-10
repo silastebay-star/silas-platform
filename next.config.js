@@ -12,7 +12,7 @@ const nextConfig = {
     domains: [
       'images.unsplash.com',
       'supabase.co',
-      'your-supabase-project.supabase.co'
+      '*.supabase.co' // Generic Supabase storage domain
     ],
   },
   env: {
@@ -23,4 +23,4 @@ const nextConfig = {
   },
 }
 
-export default nextConfig
+module.exports = nextConfig

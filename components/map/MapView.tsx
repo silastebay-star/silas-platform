@@ -1,13 +1,18 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
+import Map, { MapProvider, Source, Layer, NavigationControl, GeolocateControl } from 'react-map-gl/mapbox'
 import 'mapbox-gl/dist/mapbox-gl.css'
 import { MapPin, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { usePinsStore, type Pin } from '@/store/pins'
+import { useAuth } from '@/contexts/AuthContext'
 import { getCategoryColor } from '@/config/categories'
 import PinDrawer from './PinDrawer'
 import AddPinModal from './AddPinModal'
+import PinDetail from './PinDetail'
+import { CensusDataVisualization } from './CensusDataVisualization'
+import { handleError } from '@/lib/error-handling'
 
 interface MapViewProps {
   filteredPins: Pin[]
@@ -29,8 +34,8 @@ function toGeoJSON(pins: Pin[]) {
       id: p.id,
       properties: {
         id: p.id,
-        type: p.type,
-        color: getCategoryColor(p.type),
+        category: p.categories[0], // Use the first category for styling
+        color: getCategoryColor(p.categories[0] as CategoryKey),
         title: p.title,
       },
       geometry: {
@@ -43,8 +48,6 @@ function toGeoJSON(pins: Pin[]) {
 
 export default function MapView({ filteredPins, showAddPinModal = false, setShowAddPinModal }: MapViewProps) {
   const mapContainer = useRef<HTMLDivElement>(null)
-  const mapRef = useRef<any>(null)
-  const mapboxRef = useRef<any>(null)
   const [mapLoaded, setMapLoaded] = useState(false)
 
   const [newPinLocation, setNewPinLocation] = useState<{ lat: number; lng: number } | null>(null)
@@ -60,6 +63,8 @@ export default function MapView({ filteredPins, showAddPinModal = false, setShow
     pins,
   } = usePinsStore()
 
+  const { user } = useAuth()
+
   // Memoize GeoJSON conversion to prevent unnecessary recalculations
   const geoJsonData = useMemo(() => toGeoJSON(filteredPins), [filteredPins])
 
@@ -70,339 +75,41 @@ export default function MapView({ filteredPins, showAddPinModal = false, setShow
     return lookup
   }, [pins])
 
-  // Initialize map via dynamic import for smaller initial bundle
-  useEffect(() => {
-    let isCancelled = false
-
-    async function init() {
-      if (!mapContainer.current || mapRef.current) return
-
-      const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
-      if (!mapboxToken) {
-        console.warn('Mapbox token not found')
-        return
-      }
-
-      const mapboxgl = (await import('mapbox-gl')).default
-      if (isCancelled) return
-      mapboxRef.current = mapboxgl
-      mapboxgl.accessToken = mapboxToken
-
-      const styleUrl = process.env.NEXT_PUBLIC_MAPBOX_STYLE || 'mapbox://styles/mapbox/streets-v12'
-
-      mapRef.current = new mapboxgl.Map({
-        container: mapContainer.current,
-        style: styleUrl,
-        center: [-2.3769, 53.5526], // Stoneclough coordinates
-        zoom: 14,
-        pitch: 0,
-        bearing: 0,
-      })
-
-      mapRef.current.on('load', () => {
-        setMapLoaded(true)
-
-        // Source: pins (clustered)
-        if (!mapRef.current.getSource('pins')) {
-          mapRef.current.addSource('pins', {
-            type: 'geojson',
-            data: geoJsonData,
-            cluster: true,
-            clusterMaxZoom: 14,
-            clusterRadius: 60,
-            clusterProperties: {
-              // Calculate dominant category in each cluster
-              'dominant_category': [
-                'case',
-                ['>', ['get', 'community_count'], ['get', 'faith_count']], 'community',
-                ['>', ['get', 'faith_count'], ['get', 'projects_count']], 'faith',
-                ['>', ['get', 'projects_count'], ['get', 'economy_count']], 'projects',
-                ['>', ['get', 'economy_count'], ['get', 'events_count']], 'economy',
-                ['>', ['get', 'events_count'], ['get', 'data_ai_count']], 'events',
-                ['>', ['get', 'data_ai_count'], ['get', 'issues_count']], 'data_ai',
-                'issues' // fallback
-              ],
-              // Count pins by category in each cluster
-              'community_count': ['+', ['case', ['==', ['get', 'type'], 'community'], 1, 0]],
-              'faith_count': ['+', ['case', ['==', ['get', 'type'], 'faith'], 1, 0]],
-              'projects_count': ['+', ['case', ['==', ['get', 'type'], 'projects'], 1, 0]],
-              'economy_count': ['+', ['case', ['==', ['get', 'type'], 'economy'], 1, 0]],
-              'events_count': ['+', ['case', ['==', ['get', 'type'], 'events'], 1, 0]],
-              'data_ai_count': ['+', ['case', ['==', ['get', 'type'], 'data_ai'], 1, 0]],
-              'issues_count': ['+', ['case', ['==', ['get', 'type'], 'issues'], 1, 0]]
-            }
-          })
-        }
-
-        // Layer: clusters
-        if (!mapRef.current.getLayer('clusters')) {
-          mapRef.current.addLayer({
-            id: 'clusters',
-            type: 'circle',
-            source: 'pins',
-            filter: ['has', 'point_count'],
-            paint: {
-              // Category-aware cluster colors with fallback to SILAS green
-              'circle-color': [
-                'case',
-                ['has', 'dominant_category'],
-                [
-                  'case',
-                  ['==', ['get', 'dominant_category'], 'community'], '#6B8E6B',
-                  ['==', ['get', 'dominant_category'], 'faith'], '#3A5D3A',
-                  ['==', ['get', 'dominant_category'], 'projects'], '#4C764C',
-                  ['==', ['get', 'dominant_category'], 'economy'], '#4C6F76',
-                  ['==', ['get', 'dominant_category'], 'events'], '#8CBFA5',
-                  ['==', ['get', 'dominant_category'], 'data_ai'], '#5E6E6E',
-                  ['==', ['get', 'dominant_category'], 'issues'], '#C97340',
-                  '#4C764C' // fallback to SILAS green
-                ],
-                '#4C764C' // fallback when no dominant_category
-              ],
-              'circle-radius': [
-                'step',
-                ['get', 'point_count'],
-                16,
-                10, 20,
-                30, 26,
-                100, 32,
-              ],
-              'circle-stroke-width': 2,
-              'circle-stroke-color': '#FFF',
-              'circle-opacity': 0.8,
-            },
-          })
-        }
-
-        // Layer: cluster count labels
-        if (!mapRef.current.getLayer('cluster-count')) {
-          mapRef.current.addLayer({
-            id: 'cluster-count',
-            type: 'symbol',
-            source: 'pins',
-            filter: ['has', 'point_count'],
-            layout: {
-              'text-field': ['get', 'point_count_abbreviated'],
-              'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
-              'text-size': 12,
-            },
-            paint: {
-              'text-color': '#ffffff',
-            },
-          })
-        }
-
-        // Layer: unclustered points
-        if (!mapRef.current.getLayer('unclustered-point')) {
-          mapRef.current.addLayer({
-            id: 'unclustered-point',
-            type: 'circle',
-            source: 'pins',
-            filter: ['!', ['has', 'point_count']],
-            paint: {
-              'circle-color': ['get', 'color'],
-              'circle-radius': [
-                'case',
-                ['boolean', ['feature-state', 'hover'], false],
-                9, // larger radius on hover
-                7  // normal radius
-              ],
-              'circle-stroke-width': [
-                'case',
-                ['boolean', ['feature-state', 'hover'], false],
-                3, // thicker stroke on hover
-                2  // normal stroke
-              ],
-              'circle-stroke-color': '#FFF',
-              'circle-opacity': [
-                'case',
-                ['boolean', ['feature-state', 'hover'], false],
-                1.0, // full opacity on hover
-                0.8  // slightly transparent normally
-              ],
-            },
-          })
-        }
-
-        // Interactions: right-click add pin
-        mapRef.current.on('contextmenu', (e: any) => {
-          e.preventDefault()
-          setNewPinLocation({ lat: e.lngLat.lat, lng: e.lngLat.lng })
-          setShowAddPinModal?.(true)
-        })
-
-        // Interactions: click cluster to zoom in
-        mapRef.current.on('click', 'clusters', (e: any) => {
-          const features = mapRef.current.queryRenderedFeatures(e.point, { layers: ['clusters'] })
-          const clusterId = features[0].properties.cluster_id
-          const source: any = mapRef.current.getSource('pins')
-          source.getClusterExpansionZoom(clusterId, (err: any, zoom: number) => {
-            if (err) return
-            mapRef.current.easeTo({ center: features[0].geometry.coordinates, zoom })
-          })
-        })
-
-        // Interactions: click pin to open drawer
-        mapRef.current.on('click', 'unclustered-point', (e: any) => {
-          const feature = e.features && e.features[0]
-          if (!feature) return
-          const pinId = feature.properties?.id as string
-          const pin = pinLookup.get(pinId)
-          if (pin) {
-            setSelectedPin(pin)
-            setShowPinDrawer(true)
-          }
-        })
-
-        // Hover effects and cursor feedback
-        let hoveredPinId: string | null = null
-
-        // Cluster hover effects
-        mapRef.current.on('mouseenter', 'clusters', () => {
-          mapRef.current.getCanvas().style.cursor = 'pointer'
-        })
-        mapRef.current.on('mouseleave', 'clusters', () => {
-          mapRef.current.getCanvas().style.cursor = ''
-        })
-
-        // Pin hover effects with feature-state
-        mapRef.current.on('mouseenter', 'unclustered-point', (e: any) => {
-          mapRef.current.getCanvas().style.cursor = 'pointer'
-
-          if (e.features.length > 0) {
-            const feature = e.features[0]
-            const pinId = feature.properties?.id
-
-            if (hoveredPinId !== null) {
-              mapRef.current.setFeatureState(
-                { source: 'pins', id: hoveredPinId },
-                { hover: false }
-              )
-            }
-
-            hoveredPinId = pinId
-            mapRef.current.setFeatureState(
-              { source: 'pins', id: pinId },
-              { hover: true }
-            )
-
-            // Create lightweight hover popup
-            const coordinates = feature.geometry.coordinates.slice()
-            const { title, type } = feature.properties
-
-            // Ensure popup appears above the point
-            while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-              coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360
-            }
-
-            const popup = new mapboxRef.current.Popup({
-              closeButton: false,
-              closeOnClick: false,
-              className: 'pin-hover-popup',
-              offset: [0, -10]
-            })
-              .setLngLat(coordinates)
-              .setHTML(`
-                <div class="p-2 text-sm">
-                  <div class="font-medium text-gray-900">${title}</div>
-                  <div class="text-xs text-gray-500 capitalize">${type.replace('_', ' ')}</div>
-                </div>
-              `)
-              .addTo(mapRef.current)
-
-            // Store popup reference for cleanup
-            mapRef.current._hoverPopup = popup
-          }
-        })
-
-        mapRef.current.on('mouseleave', 'unclustered-point', () => {
-          mapRef.current.getCanvas().style.cursor = ''
-
-          if (hoveredPinId !== null) {
-            mapRef.current.setFeatureState(
-              { source: 'pins', id: hoveredPinId },
-              { hover: false }
-            )
-            hoveredPinId = null
-          }
-
-          // Remove hover popup
-          if (mapRef.current._hoverPopup) {
-            mapRef.current._hoverPopup.remove()
-            mapRef.current._hoverPopup = null
-          }
-        })
-
-        // Navigation controls
-        mapRef.current.addControl(new mapboxgl.NavigationControl(), 'top-right')
-        mapRef.current.addControl(
-          new mapboxgl.GeolocateControl({
-            positionOptions: { enableHighAccuracy: true },
-            trackUserLocation: true,
-            showUserHeading: true,
-          }),
-          'top-right',
-        )
-      })
-    }
-
-    init()
-
-    return () => {
-      isCancelled = true
-      if (mapRef.current) {
-        mapRef.current.remove()
-        mapRef.current = null
-      }
-    }
-  // We intentionally exclude filteredPins here; source updates handled below
-  }, [])
+  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
+  const styleUrl = process.env.NEXT_PUBLIC_MAPBOX_STYLE || 'mapbox://styles/mapbox/streets-v12'
 
   // Fetch pins on mount
   useEffect(() => {
     fetchPins()
   }, [fetchPins])
 
-  // Keep GeoJSON source in sync with filtered pins
-  useEffect(() => {
-    if (!mapRef.current || !mapLoaded) return
-    const source: any = mapRef.current.getSource('pins')
-    if (source) {
-      source.setData(geoJsonData)
-    }
-  }, [geoJsonData, mapLoaded])
-
-  // Keyboard shortcut: 'A' to add a pin at map center
-  useEffect(() => {
-    if (!mapRef.current || !mapLoaded) return
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key.toLowerCase() === 'a') {
-        const center = mapRef.current.getCenter()
-        setNewPinLocation({ lat: center.lat, lng: center.lng })
-        setShowAddPinModal?.(true)
-      }
-    }
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
-  }, [mapLoaded])
-
   // Handle add pin
   const handleAddPin = async (pinData: any) => {
-    if (!newPinLocation) return
+    if (!user) {
+      handleError('You must be logged in to add a pin.', 'MapView - handleAddPin', true)
+      return
+    }
+    if (!newPinLocation) {
+      handleError('Pin location not set.', 'MapView - handleAddPin', true)
+      return
+    }
 
-    const newPin = await addPin({
-      ...pinData,
-      lat: newPinLocation.lat,
-      lng: newPinLocation.lng,
-    })
+    try {
+      const newPin = await addPin({
+        ...pinData,
+        lat: newPinLocation.lat,
+        lng: newPinLocation.lng,
+        author_id: user.id,
+      })
 
-    if (newPin) {
-      setShowAddPinModal?.(false)
-      setNewPinLocation(null)
+      if (newPin) {
+        setShowAddPinModal?.(false)
+        setNewPinLocation(null)
+      }
+    } catch (error: any) {
+      handleError(error, 'MapView - handleAddPin', true)
     }
   }
-
-  const mapboxToken = process.env.NEXT_PUBLIC_MAPBOX_TOKEN
 
   if (!mapboxToken) {
     return (
@@ -419,8 +126,107 @@ export default function MapView({ filteredPins, showAddPinModal = false, setShow
 
   return (
     <div className="relative w-full h-full">
-      {/* Map Container */}
-      <div ref={mapContainer} className="w-full h-full" />
+      <MapProvider>
+        <Map
+          mapboxAccessToken={mapboxToken}
+          initialViewState={{
+            longitude: -2.3769,
+            latitude: 53.5526,
+            zoom: 14,
+          }}
+          style={{ width: '100%', height: '100%' }}
+          mapStyle={styleUrl}
+          onLoad={() => setMapLoaded(true)}
+          interactiveLayerIds={['unclustered-point', 'clusters']}
+          onClick={(e) => {
+            if (e.features && e.features.length > 0) {
+              const feature = e.features[0]
+              if (feature.layer.id === 'unclustered-point') {
+                const pinId = feature.properties?.id as string
+                const pin = pinLookup.get(pinId)
+                if (pin) {
+                  setSelectedPin(pin)
+                  setShowPinDrawer(true)
+                }
+              } else if (feature.layer.id === 'clusters') {
+                const clusterId = feature.properties?.cluster_id
+                const source = e.target.getSource('pins')
+                source.getClusterExpansionZoom(clusterId, (err: any, zoom: number) => {
+                  if (err) return
+                  e.target.easeTo({ center: feature.geometry.coordinates, zoom })
+                })
+              }
+            }
+          }}
+          onContextMenu={(e) => {
+            e.preventDefault()
+            setNewPinLocation({ lat: e.lngLat.lat, lng: e.lngLat.lng })
+            setShowAddPinModal?.(true)
+          }}
+        >
+          {mapLoaded && (
+            <>
+              {/* Source: pins (clustered) */}
+              <Source
+                id="pins"
+                type="geojson"
+                data={geoJsonData}
+                cluster={true}
+                clusterMaxZoom={14}
+                clusterRadius={60}
+              >
+                <Layer
+                  id="clusters"
+                  type="circle"
+                  filter={['has', 'point_count']}
+                  paint={{
+                    'circle-color': '#4C764C', // Silas Green
+                    'circle-radius': [
+                      'step',
+                      ['get', 'point_count'],
+                      16,
+                      10, 20,
+                      30, 26,
+                      100, 32,
+                    ],
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#FFF',
+                    'circle-opacity': 0.8,
+                  }}
+                />
+                <Layer
+                  id="cluster-count"
+                  type="symbol"
+                  filter={['has', 'point_count']}
+                  layout={{
+                    'text-field': ['get', 'point_count_abbreviated'],
+                    'text-font': ['DIN Offc Pro Medium', 'Arial Unicode MS Bold'],
+                    'text-size': 12,
+                  }}
+                  paint={{
+                    'text-color': '#ffffff',
+                  }}
+                />
+                <Layer
+                  id="unclustered-point"
+                  type="circle"
+                  filter={['!', ['has', 'point_count']]}
+                  paint={{
+                    'circle-color': ['get', 'color'],
+                    'circle-radius': 7,
+                    'circle-stroke-width': 2,
+                    'circle-stroke-color': '#FFF',
+                    'circle-opacity': 0.8,
+                  }}
+                />
+              </Source>
+              <NavigationControl position="top-right" />
+              <GeolocateControl positionOptions={{ enableHighAccuracy: true }} trackUserLocation={true} showUserHeading={true} />
+              <CensusDataVisualization />
+            </>
+          )}
+        </Map>
+      </MapProvider>
 
       {/* Loading State */}
       {isLoading && (
@@ -459,7 +265,7 @@ export default function MapView({ filteredPins, showAddPinModal = false, setShow
       </div>
 
       {/* Add Pin Modal */}
-      {setShowAddPinModal && (
+      {setShowAddPinModal && user && (
         <AddPinModal
           isOpen={showAddPinModal}
           onClose={() => {
@@ -468,10 +274,20 @@ export default function MapView({ filteredPins, showAddPinModal = false, setShow
           }}
           onSubmit={handleAddPin}
           location={newPinLocation}
+          authorId={user.id}
         />
       )}
 
-      {/* Pin Drawer */}
+      {/* Pin Detail Modal */}
+      {selectedPin && (
+        <PinDetail
+          pinId={selectedPin.id}
+          isOpen={!!selectedPin}
+          onClose={() => setSelectedPin(null)}
+        />
+      )}
+
+      {/* Pin Drawer (This might be removed later if PinDetail replaces it entirely) */}
       <PinDrawer
         pin={selectedPin}
         isOpen={showPinDrawer}

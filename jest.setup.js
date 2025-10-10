@@ -1,5 +1,11 @@
 import '@testing-library/jest-dom'
 
+// Mock ReactDOM.render for compatibility with @testing-library/react
+jest.mock('react-dom', () => ({
+  ...jest.requireActual('react-dom'),
+  render: jest.fn(),
+}))
+
 // Mock IntersectionObserver
 global.IntersectionObserver = class IntersectionObserver {
   constructor() {}
@@ -74,39 +80,13 @@ jest.mock('mapbox-gl', () => ({
     addTo: jest.fn().mockReturnThis(),
     remove: jest.fn(),
   })),
+  LngLatBounds: jest.fn(() => ({
+    extend: jest.fn().mockReturnThis(),
+    toArray: jest.fn(() => [[0, 0], [0, 0]]),
+  })),
 }))
 
-// Mock Supabase
-jest.mock('@/lib/supabase', () => ({
-  supabase: {
-    auth: {
-      getSession: jest.fn(() => Promise.resolve({ data: { session: null }, error: null })),
-      onAuthStateChange: jest.fn(() => ({ data: { subscription: { unsubscribe: jest.fn() } } })),
-      signInWithPassword: jest.fn(),
-      signUp: jest.fn(),
-      signOut: jest.fn(),
-      signInWithOAuth: jest.fn(),
-    },
-    from: jest.fn(() => ({
-      select: jest.fn().mockReturnThis(),
-      insert: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      delete: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      limit: jest.fn().mockReturnThis(),
-      single: jest.fn(() => Promise.resolve({ data: null, error: null })),
-    })),
-    storage: {
-      from: jest.fn(() => ({
-        upload: jest.fn(),
-        getPublicUrl: jest.fn(() => ({ data: { publicUrl: 'mock-url' } })),
-        remove: jest.fn(),
-      })),
-    },
-    rpc: jest.fn(() => Promise.resolve({ data: null, error: null })),
-  },
-}))
+
 
 // Mock next/navigation
 jest.mock('next/navigation', () => ({

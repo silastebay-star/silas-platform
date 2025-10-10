@@ -1,0 +1,400 @@
+/**
+ * Pin Social Service
+ * Handles pin-based discussions, voting, and social interactions
+ */
+
+// @ts-nocheck
+
+import { createSupabaseClient, withSupabaseErrorHandling } from '@/lib/supabase/client'
+import type { Database } from '@/lib/supabase/database.types'
+
+export type PostType = 'comment' | 'update' | 'question' | 'proposal'
+export type VoteType = 'support' | 'oppose' | 'abstain' | 'priority_high' | 'priority_low'
+
+export interface PinPost {
+  id: string
+  pin_id: string
+  user_id: string
+  parent_id?: string
+  content: string
+  post_type: PostType
+  like_count: number
+  reply_count: number
+  is_edited: boolean
+  is_flagged: boolean
+  is_pinned: boolean
+  metadata: Record<string, any>
+  created_at: string
+  updated_at: string
+  
+  // Joined data
+  user?: {
+    id: string
+    display_name?: string
+    avatar_url?: string
+  }
+  replies?: PinPost[]
+}
+
+export interface PinVote {
+  id: string
+  pin_id: string
+  user_id: string
+  vote_type: VoteType
+  vote_weight: number
+  comment?: string
+  metadata: Record<string, any>
+  created_at: string
+  updated_at: string
+  
+  // Joined data
+  user?: {
+    id: string
+    display_name?: string
+    avatar_url?: string
+  }
+}
+
+export interface CreatePostData {
+  pin_id: string
+  content: string
+  post_type?: PostType
+  parent_id?: string
+  metadata?: Record<string, any>
+}
+
+export interface CreateVoteData {
+  pin_id: string
+  vote_type: VoteType
+  vote_weight?: number
+  comment?: string
+  metadata?: Record<string, any>
+}
+
+export interface PostFilters {
+  pin_id?: string
+  user_id?: string
+  post_type?: PostType
+  parent_id?: string | null
+  is_flagged?: boolean
+}
+
+export interface VoteFilters {
+  pin_id?: string
+  user_id?: string
+  vote_type?: VoteType
+}
+
+export interface PaginationOptions {
+  limit?: number
+  offset?: number
+  order_by?: string
+  order_direction?: 'asc' | 'desc'
+}
+
+class PinSocialService {
+  private supabase = createSupabaseClient()
+
+  // =============================================
+  // PIN POSTS (DISCUSSIONS)
+  // =============================================
+
+  async createPost(data: CreatePostData): Promise<{ post: PinPost; error?: string }> {
+    return (withSupabaseErrorHandling as any)(async () => {
+      const { data: post, error } = await (this.supabase
+        .from('pin_posts'))
+        .insert({
+          pin_id: data.pin_id,
+          content: data.content,
+          post_type: data.post_type || 'comment',
+          parent_id: data.parent_id,
+          metadata: data.metadata || {}
+        })
+        .select(`
+          *,
+          user:user_profiles(id, display_name, avatar_url)
+        `)
+        .single()
+
+      if (error) throw error
+
+      return { post }
+    })
+  }
+
+  async getPosts(
+    filters: PostFilters = {},
+    pagination: PaginationOptions = {}
+  ): Promise<{ posts: PinPost[]; total?: number; error?: string }> {
+    return (withSupabaseErrorHandling as any)(async () => {
+      let query = this.supabase
+        .from('pin_posts'))
+        .select(`
+          *,
+          user:user_profiles(id, display_name, avatar_url)
+        `, { count: 'exact' })
+
+      // Apply filters
+      if (filters.pin_id) {
+        query = query.eq('pin_id', filters.pin_id)
+      }
+      if (filters.user_id) {
+        query = query.eq('user_id', filters.user_id)
+      }
+      if (filters.post_type) {
+        query = query.eq('post_type', filters.post_type)
+      }
+      if (filters.parent_id !== undefined) {
+        if (filters.parent_id === null) {
+          query = query.is('parent_id', null)
+        } else {
+          query = query.eq('parent_id', filters.parent_id)
+        }
+      }
+      if (filters.is_flagged !== undefined) {
+        query = query.eq('is_flagged', filters.is_flagged)
+      }
+
+      // Apply pagination and ordering
+      const limit = pagination.limit || 50
+      const offset = pagination.offset || 0
+      const orderBy = pagination.order_by || 'created_at'
+      const orderDirection = pagination.order_direction || 'desc'
+
+      query = query
+        .order(orderBy, { ascending: orderDirection === 'asc' })
+        .range(offset, offset + limit - 1)
+
+      const { data: posts, error, count } = await query
+
+      if (error) throw error
+
+      return { posts: posts || [], total: count || 0 }
+    })
+  }
+
+  async getPostThread(postId: string): Promise<{ posts: PinPost[]; error?: string }> {
+    return (withSupabaseErrorHandling as any)(async () => {
+      // Get the main post and all its replies recursively
+      const { data: posts, error } = await (this.supabase as any)
+        .rpc('get_post_thread', { post_id: postId })
+
+      if (error) throw error
+
+      return { posts: posts || [] }
+    })
+  }
+
+  async updatePost(
+    postId: string,
+    updates: Partial<Pick<PinPost, 'content' | 'is_pinned' | 'metadata'>>
+  ): Promise<{ post: PinPost; error?: string }> {
+    return (withSupabaseErrorHandling as any)(async () => {
+      const { data: post, error } = await (this.supabase
+        .from('pin_posts'))
+        .update({
+          ...updates,
+          is_edited: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', postId)
+        .select(`
+          *,
+          user:user_profiles(id, display_name, avatar_url)
+        `)
+        .single()
+
+      if (error) throw error
+
+      return { post }
+    })
+  }
+
+  async deletePost(postId: string): Promise<{ success: boolean; error?: string }> {
+    return (withSupabaseErrorHandling as any)(async () => {
+      const { error } = await (this.supabase
+        .from('pin_posts'))
+        .delete()
+        .eq('id', postId)
+
+      if (error) throw error
+
+      return { success: true }
+    })
+  }
+
+  async likePost(postId: string): Promise<{ success: boolean; error?: string }> {
+    return (withSupabaseErrorHandling as any)(async () => {
+      // Increment like count
+      const { error } = await (this.supabase
+        .from('pin_posts'))
+        .update({ like_count: this.supabase.sql`like_count + 1` })
+        .eq('id', postId)
+
+      if (error) throw error
+
+      return { success: true }
+    })
+  }
+
+  async unlikePost(postId: string): Promise<{ success: boolean; error?: string }> {
+    return (withSupabaseErrorHandling as any)(async () => {
+      // Decrement like count
+      const { error } = await (this.supabase
+        .from('pin_posts'))
+        .update({ like_count: this.supabase.sql`GREATEST(like_count - 1, 0)` })
+        .eq('id', postId)
+
+      if (error) throw error
+
+      return { success: true }
+    })
+  }
+
+  // =============================================
+  // PIN VOTING
+  // =============================================
+
+  async castVote(data: CreateVoteData): Promise<{ vote: PinVote; error?: string }> {
+    return (withSupabaseErrorHandling as any)(async () => {
+      const { data: vote, error } = await (this.supabase
+        .from('pin_votes'))
+        .upsert({
+          pin_id: data.pin_id,
+          vote_type: data.vote_type,
+          vote_weight: data.vote_weight || 1,
+          comment: data.comment,
+          metadata: data.metadata || {}
+        })
+        .select(`
+          *,
+          user:user_profiles(id, display_name, avatar_url)
+        `)
+        .single()
+
+      if (error) throw error
+
+      return { vote }
+    })
+  }
+
+  async removeVote(pinId: string, voteType: VoteType): Promise<{ success: boolean; error?: string }> {
+    return (withSupabaseErrorHandling as any)(async () => {
+      const { error } = await (this.supabase
+        .from('pin_votes'))
+        .delete()
+        .eq('pin_id', pinId)
+        .eq('vote_type', voteType)
+
+      if (error) throw error
+
+      return { success: true }
+    })
+  }
+
+  async getVotes(
+    filters: VoteFilters = {},
+    pagination: PaginationOptions = {}
+  ): Promise<{ votes: PinVote[]; total?: number; error?: string }> {
+    return (withSupabaseErrorHandling as any)(async () => {
+      let query = this.supabase
+        .from('pin_votes'))
+        .select(`
+          *,
+          user:user_profiles(id, display_name, avatar_url)
+        `, { count: 'exact' })
+
+      // Apply filters
+      if (filters.pin_id) {
+        query = query.eq('pin_id', filters.pin_id)
+      }
+      if (filters.user_id) {
+        query = query.eq('user_id', filters.user_id)
+      }
+      if (filters.vote_type) {
+        query = query.eq('vote_type', filters.vote_type)
+      }
+
+      // Apply pagination and ordering
+      const limit = pagination.limit || 50
+      const offset = pagination.offset || 0
+
+      query = query
+        .order('created_at', { ascending: false })
+        .range(offset, offset + limit - 1)
+
+      const { data: votes, error, count } = await query
+
+      if (error) throw error
+
+      return { votes: votes || [], total: count || 0 }
+    })
+  }
+
+  async getVoteSummary(pinId: string): Promise<{ 
+    summary: Record<VoteType, number>; 
+    total: number; 
+    error?: string 
+  }> {
+    return (withSupabaseErrorHandling as any)(async () => {
+      const { data: votes, error } = await (this.supabase
+        .from('pin_votes'))
+        .select('vote_type, vote_weight')
+        .eq('pin_id', pinId)
+
+      if (error) throw error
+
+      const summary: Record<VoteType, number> = {
+        support: 0,
+        oppose: 0,
+        abstain: 0,
+        priority_high: 0,
+        priority_low: 0
+      }
+
+      let total = 0
+
+      votes?.forEach(vote => {
+        summary[vote.vote_type] += vote.vote_weight || 1
+        total += vote.vote_weight || 1
+      })
+
+      return { summary, total }
+    })
+  }
+
+  // =============================================
+  // MODERATION
+  // =============================================
+
+  async flagPost(postId: string, reason?: string): Promise<{ success: boolean; error?: string }> {
+    return (withSupabaseErrorHandling as any)(async () => {
+      const { error } = await (this.supabase
+        .from('pin_posts'))
+        .update({ 
+          is_flagged: true,
+          metadata: this.supabase.sql`metadata || ${JSON.stringify({ flag_reason: reason })}`
+        })
+        .eq('id', postId)
+
+      if (error) throw error
+
+      return { success: true }
+    })
+  }
+
+  async unflagPost(postId: string): Promise<{ success: boolean; error?: string }> {
+    return (withSupabaseErrorHandling as any)(async () => {
+      const { error } = await (this.supabase
+        .from('pin_posts'))
+        .update({ is_flagged: false })
+        .eq('id', postId)
+
+      if (error) throw error
+
+      return { success: true }
+    })
+  }
+}
+
+export default new PinSocialService()

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=Source+Sans+Pro:wght@400;600&family=Rubik:wght@400&display=swap');
+
 @import '../styles/design-tokens.css';
 @tailwind base;
 @tailwind components;
@@ -6,8 +8,11 @@
 /* SILAS Theme Variables */
 :root {
   --silas-green: #4C764C;
-  --silas-dark: #1C1F1C;
-  --silas-light: #E6F0E6;
+  --silas-sky-blue: #63B3ED;
+  --silas-warm-yellow: #FFD700;
+  --silas-slate-dark: #1C1F1C;
+  --silas-light-grey: #E6E6E6;
+  --silas-pure-white: #FFFFFF;
   
   /* Shadcn UI Variables */
   --background: 0 0% 100%;
@@ -30,6 +35,10 @@
   --input: 214.3 31.8% 91.4%;
   --ring: 142 69% 38%;
   --radius: 0.5rem;
+
+  --font-sans: 'Source Sans Pro', sans-serif;
+  --font-heading: 'Inter', sans-serif;
+  --font-accent: 'Rubik', sans-serif;
 }
 
 .dark {

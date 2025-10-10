@@ -119,7 +119,7 @@ export default function PinLayer({
               'economy', getCategoryColor('economy'),
               'events', getCategoryColor('events'),
               'data_ai', getCategoryColor('data_ai'),
-              'issues', getCategoryColor('issues'),
+              'safety', getCategoryColor('safety'),
               '#6B8E6B' // Default
             ],
             '#6B8E6B' // Fallback
@@ -174,7 +174,7 @@ export default function PinLayer({
               'economy', getCategoryColor('economy'),
               'events', getCategoryColor('events'),
               'data_ai', getCategoryColor('data_ai'),
-              'issues', getCategoryColor('issues'),
+              'safety', getCategoryColor('safety'),
               '#6B8E6B' // Default
             ],
             '#6B8E6B' // Fallback

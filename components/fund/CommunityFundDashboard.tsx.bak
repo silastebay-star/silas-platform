@@ -1,0 +1,387 @@
+/**
+ * Community Fund Dashboard
+ * Enhanced fund management with Stripe integration and transparency
+ */
+
+'use client'
+
+// @ts-nocheck
+
+import { useState, useEffect } from 'react'
+import { DollarSign, TrendingUp, Users, Target, Plus, ArrowUpRight, ArrowDownRight, Calendar } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Progress } from '@/components/ui/progress'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import { useAuth } from '@/lib/auth/auth-context'
+// import communityFundService, { FundTransaction, FundSummary } from '@/lib/services/community-fund-service'
+import { Elements } from '@stripe/react-stripe-js'
+import { loadStripe } from '@stripe/stripe-js'
+import StripeContributionForm from './StripeContributionForm'
+import { toast } from 'sonner'
+import { formatDistanceToNow } from 'date-fns'
+import { cn } from '@/lib/utils'
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!)
+
+interface CommunityFundDashboardProps {
+  className?: string
+}
+
+export default function CommunityFundDashboard({ className }: CommunityFundDashboardProps) {
+  const [summary, setSummary] = useState<FundSummary | null>(null)
+  const [transactions, setTransactions] = useState<FundTransaction[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showContributeDialog, setShowContributeDialog] = useState(false)
+  const [showAllocateDialog, setShowAllocateDialog] = useState(false)
+  const [selectedTab, setSelectedTab] = useState('overview')
+
+  const { user, isAuthenticated } = useAuth()
+
+  useEffect(() => {
+    loadFundData()
+  }, [])
+
+  const loadFundData = async () => {
+    try {
+      setLoading(true)
+      
+      // Load fund summary
+      const fundSummary = await communityFundService.getFundSummary()
+      setSummary(fundSummary)
+
+      // Load recent transactions
+      const { transactions: recentTransactions } = await communityFundService.getTransactions({}, {
+        limit: 20,
+        order_by: 'created_at',
+        order_direction: 'desc'
+      })
+      setTransactions(recentTransactions)
+    } catch (error) {
+      console.error('Error loading fund data:', error)
+      toast.error('Failed to load fund data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleContributionSuccess = () => {
+    setShowContributeDialog(false)
+    loadFundData()
+    toast.success('Thank you for your contribution!')
+  }
+
+  const formatCurrency = (amount: number, currency = 'GBP') => {
+    return new Intl.NumberFormat('en-GB', {
+      style: 'currency',
+      currency
+    }).format(amount)
+  }
+
+  const getTransactionIcon = (type: string) => {
+    switch (type) {
+      case 'contribution':
+        return <ArrowUpRight className="h-4 w-4 text-green-600" />
+      case 'allocation':
+        return <ArrowDownRight className="h-4 w-4 text-blue-600" />
+      case 'refund':
+        return <ArrowUpRight className="h-4 w-4 text-orange-600" />
+      default:
+        return <DollarSign className="h-4 w-4 text-gray-600" />
+    }
+  }
+
+  const getTransactionColor = (type: string) => {
+    switch (type) {
+      case 'contribution':
+        return 'text-green-600'
+      case 'allocation':
+        return 'text-blue-600'
+      case 'refund':
+        return 'text-orange-600'
+      default:
+        return 'text-gray-600'
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className={cn("space-y-6", className)}>
+        <div className="animate-pulse space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="h-24 bg-gray-200 rounded-lg" />
+            ))}
+          </div>
+          <div className="h-64 bg-gray-200 rounded-lg" />
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className={cn("space-y-6", className)}>
+      {/* Fund Summary Cards */}
+      {summary && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <Card className="">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Available Balance</CardTitle>
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="">
+              <div className="text-2xl font-bold text-green-600">
+                {formatCurrency(summary.available_balance)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Ready for allocation
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Contributions</CardTitle>
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="">
+              <div className="text-2xl font-bold">
+                {formatCurrency(summary.total_contributions)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                From {summary.total_contributors} contributors
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Allocated</CardTitle>
+              <Target className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="">
+              <div className="text-2xl font-bold">
+                {formatCurrency(summary.total_allocations)}
+              </div>
+              <p className="text-xs text-muted-foreground">
+                To {summary.total_projects_funded} projects
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Contributors</CardTitle>
+              <Users className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent className="">
+              <div className="text-2xl font-bold">{summary.total_contributors}</div>
+              <p className="text-xs text-muted-foreground">
+                Community members
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Action Buttons */}
+      <div className="flex gap-4">
+        <Dialog open={showContributeDialog} onOpenChange={setShowContributeDialog}>
+          <DialogTrigger asChild>
+            <Button variant="default" size="default" className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Contribute to Fund
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader className="">
+              <DialogTitle className="">Contribute to Community Fund</DialogTitle>
+            </DialogHeader>
+            <Elements stripe={stripePromise}>
+              <StripeContributionForm onSuccess={handleContributionSuccess} />
+            </Elements>
+          </DialogContent>
+        </Dialog>
+
+        {isAuthenticated && (
+          <Button variant="outline" size="default" className="" onClick={() => setShowAllocateDialog(true)}>
+            Propose Allocation
+          </Button>
+        )}
+      </div>
+
+      {/* Fund Details Tabs */}
+      <Tabs value={selectedTab} onValueChange={setSelectedTab} className="">
+        <TabsList className="">
+          <TabsTrigger value="overview" className="">Overview</TabsTrigger>
+          <TabsTrigger value="transactions" className="">Transactions</TabsTrigger>
+          <TabsTrigger value="allocations" className="">Allocations</TabsTrigger>
+          <TabsTrigger value="transparency" className="">Transparency</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-4">
+          <Card className="">
+            <CardHeader className="">
+              <CardTitle className="">Fund Health</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {summary && (
+                <>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Allocation Rate</span>
+                      <span>
+                        {summary.total_contributions > 0 
+                          ? Math.round((summary.total_allocations / summary.total_contributions) * 100)
+                          : 0
+                        }%
+                      </span>
+                    </div>
+                    <Progress 
+                      value={summary.total_contributions > 0 
+                        ? (summary.total_allocations / summary.total_contributions) * 100
+                        : 0
+                      } 
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <div className="text-muted-foreground">Monthly Goal</div>
+                      <div className="font-medium">£2,000</div>
+                    </div>
+                    <div>
+                      <div className="text-muted-foreground">This Month</div>
+                      <div className="font-medium">{formatCurrency(summary.total_contributions * 0.3)}</div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="transactions" className="space-y-4">
+          <Card className="">
+            <CardHeader className="">
+              <CardTitle className="">Recent Transactions</CardTitle>
+            </CardHeader>
+            <CardContent className="">
+              <div className="space-y-3">
+                {transactions.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No transactions yet
+                  </div>
+                ) : (
+                  transactions.map(transaction => (
+                    <div key={transaction.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        {getTransactionIcon(transaction.transaction_type)}
+                        <div>
+                          <div className="font-medium text-sm">
+                            {transaction.transaction_type === 'contribution' && 'Contribution'}
+                            {transaction.transaction_type === 'allocation' && 'Allocation'}
+                            {transaction.transaction_type === 'refund' && 'Refund'}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {transaction.contributor?.display_name || 'Anonymous'} • {' '}
+                            {formatDistanceToNow(new Date(transaction.created_at), { addSuffix: true })}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className={cn("font-medium", getTransactionColor(transaction.transaction_type))}>
+                          {transaction.transaction_type === 'allocation' ? '-' : '+'}
+                          {formatCurrency(Math.abs(transaction.amount))}
+                        </div>
+                        <Badge variant="secondary" className="text-xs">
+                          {transaction.status}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="allocations" className="space-y-4">
+          <Card className="">
+            <CardHeader className="">
+              <CardTitle className="">Fund Allocations</CardTitle>
+            </CardHeader>
+            <CardContent className="">
+              <div className="space-y-3">
+                {transactions
+                  .filter(t => t.transaction_type === 'allocation')
+                  .map(allocation => (
+                    <div key={allocation.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Target className="h-4 w-4 text-blue-600" />
+                        <div>
+                          <div className="font-medium text-sm">
+                            {allocation.pin?.title || allocation.project?.title || 'Project Funding'}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {allocation.description}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-medium text-blue-600">
+                          {formatCurrency(Math.abs(allocation.amount))}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(allocation.created_at), { addSuffix: true })}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="transparency" className="space-y-4">
+          <Card className="">
+            <CardHeader className="">
+              <CardTitle className="">Transparency Report</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="text-sm text-muted-foreground">
+                All fund transactions are recorded on the blockchain for complete transparency.
+                Community members can view all contributions and allocations.
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">Fund Governance</div>
+                  <div className="text-xs text-muted-foreground">
+                    Allocations require community voting and approval
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="text-sm font-medium">Audit Trail</div>
+                  <div className="text-xs text-muted-foreground">
+                    All transactions are permanently recorded
+                  </div>
+                </div>
+              </div>
+
+              <Button variant="outline" size="sm" className="w-full">
+                <Calendar className="h-4 w-4 mr-2" />
+                Download Monthly Report
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}

@@ -1,0 +1,377 @@
+/**
+ * Pin Discussion Component
+ * Handles threaded discussions and social interactions for pins
+ */
+
+'use client'
+
+import { useState, useEffect } from 'react'
+import { MessageCircle, Heart, Reply, Flag, Pin, MoreHorizontal } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Card, CardContent, CardHeader } from '@/components/ui/card'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
+import { Badge } from '@/components/ui/badge'
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import { useAuth } from '@/lib/auth/auth-context'
+import pinSocialService, { PinPost, PostType } from '@/lib/services/pin-social-service'
+import { toast } from 'sonner'
+import { formatDistanceToNow } from 'date-fns'
+import { cn } from '@/lib/utils'
+
+interface PinDiscussionProps {
+  pinId: string
+  className?: string
+}
+
+interface PostItemProps {
+  post: PinPost
+  onReply: (parentId: string) => void
+  onLike: (postId: string) => void
+  onFlag: (postId: string) => void
+  level?: number
+}
+
+const POST_TYPE_COLORS: Record<PostType, string> = {
+  comment: 'bg-gray-100 text-gray-800',
+  update: 'bg-blue-100 text-blue-800',
+  question: 'bg-yellow-100 text-yellow-800',
+  proposal: 'bg-green-100 text-green-800'
+}
+
+const POST_TYPE_LABELS: Record<PostType, string> = {
+  comment: 'Comment',
+  update: 'Update',
+  question: 'Question',
+  proposal: 'Proposal'
+}
+
+function PostItem({ post, onReply, onLike, onFlag, level = 0 }: PostItemProps) {
+  const { user } = useAuth()
+  const [showReplyForm, setShowReplyForm] = useState(false)
+  const [liked, setLiked] = useState(false)
+
+  const isOwner = user?.id === post.user_id
+  const maxLevel = 3 // Maximum nesting level
+
+  const handleLike = async () => {
+    try {
+      if (liked) {
+        await pinSocialService.unlikePost(post.id)
+        setLiked(false)
+      } else {
+        await pinSocialService.likePost(post.id)
+        setLiked(true)
+      }
+      onLike(post.id)
+    } catch (error) {
+      toast.error('Failed to update like')
+    }
+  }
+
+  const handleReply = () => {
+    if (level < maxLevel) {
+      setShowReplyForm(true)
+      onReply(post.id)
+    }
+  }
+
+  const handleFlag = () => {
+    onFlag(post.id)
+  }
+
+  return (
+    <div className={cn(
+      "space-y-3",
+      level > 0 && "ml-6 pl-4 border-l-2 border-gray-200"
+    )}>
+      <Card className="shadow-sm">
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between">
+            <div className="flex items-center gap-3">
+              <Avatar className="h-8 w-8">
+                <AvatarImage src={post.user?.avatar_url} />
+                <AvatarFallback>
+                  {post.user?.display_name?.charAt(0) || 'U'}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-sm">
+                    {post.user?.display_name || 'Anonymous'}
+                  </span>
+                  <Badge variant="secondary" className={cn("text-xs", POST_TYPE_COLORS[post.post_type])}>
+                    {POST_TYPE_LABELS[post.post_type]}
+                  </Badge>
+                  {post.is_pinned && (
+                    <Pin className="h-3 w-3 text-blue-600" />
+                  )}
+                </div>
+                <span className="text-xs text-gray-500">
+                  {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
+                  {post.is_edited && ' (edited)'}
+                </span>
+              </div>
+            </div>
+            
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="" align="end">
+                {level < maxLevel && (
+                  <DropdownMenuItem className="" inset={false} onClick={handleReply}>
+                    <Reply className="h-4 w-4 mr-2" />
+                    Reply
+                  </DropdownMenuItem>
+                )}
+                {!isOwner && (
+                  <DropdownMenuItem className="" inset={false} onClick={handleFlag}>
+                    <Flag className="h-4 w-4 mr-2" />
+                    Report
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </CardHeader>
+        
+        <CardContent className="pt-0">
+          <p className="text-sm text-gray-700 whitespace-pre-wrap">
+            {post.content}
+          </p>
+          
+          <div className="flex items-center gap-4 mt-3 pt-3 border-t">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleLike}
+              className={cn(
+                "h-8 px-2 text-xs",
+                liked && "text-red-600"
+              )}
+            >
+              <Heart className={cn("h-4 w-4 mr-1", liked && "fill-current")} />
+              {post.like_count}
+            </Button>
+            
+            {level < maxLevel && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleReply}
+                className="h-8 px-2 text-xs"
+              >
+                <Reply className="h-4 w-4 mr-1" />
+                Reply
+              </Button>
+            )}
+            
+            {post.reply_count > 0 && (
+              <span className="text-xs text-gray-500">
+                {post.reply_count} {post.reply_count === 1 ? 'reply' : 'replies'}
+              </span>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+      
+      {/* Render replies */}
+      {post.replies?.map(reply => (
+        <PostItem
+          key={reply.id}
+          post={reply}
+          onReply={onReply}
+          onLike={onLike}
+          onFlag={onFlag}
+          level={level + 1}
+        />
+      ))}
+    </div>
+  )
+}
+
+export default function PinDiscussion({ pinId, className }: PinDiscussionProps) {
+  const [posts, setPosts] = useState<PinPost[]>([])
+  const [loading, setLoading] = useState(true)
+  const [newPostContent, setNewPostContent] = useState('')
+  const [newPostType, setNewPostType] = useState<PostType>('comment')
+  const [replyingTo, setReplyingTo] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+
+  const { user, isAuthenticated } = useAuth()
+
+  useEffect(() => {
+    loadPosts()
+  }, [pinId])
+
+  const loadPosts = async () => {
+    try {
+      setLoading(true)
+      const { posts: fetchedPosts } = await pinSocialService.getPosts({
+        pin_id: pinId,
+        parent_id: null // Only get top-level posts
+      })
+      setPosts(fetchedPosts)
+    } catch (error) {
+      console.error('Error loading posts:', error)
+      toast.error('Failed to load discussion')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleSubmitPost = async () => {
+    if (!newPostContent.trim() || !isAuthenticated) return
+
+    try {
+      setSubmitting(true)
+      const { post } = await pinSocialService.createPost({
+        pin_id: pinId,
+        content: newPostContent.trim(),
+        post_type: newPostType,
+        parent_id: replyingTo || undefined
+      })
+
+      // Add new post to the list
+      if (replyingTo) {
+        // Handle reply - would need to update the parent post's replies
+        await loadPosts() // Reload for now
+      } else {
+        setPosts(prev => [post, ...prev])
+      }
+
+      setNewPostContent('')
+      setReplyingTo(null)
+      toast.success('Post added successfully')
+    } catch (error) {
+      console.error('Error creating post:', error)
+      toast.error('Failed to add post')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleReply = (parentId: string) => {
+    setReplyingTo(parentId)
+    setNewPostType('comment')
+  }
+
+  const handleLike = (postId: string) => {
+    // Update local state optimistically
+    setPosts(prev => prev.map(post => 
+      post.id === postId 
+        ? { ...post, like_count: post.like_count + 1 }
+        : post
+    ))
+  }
+
+  const handleFlag = async (postId: string) => {
+    try {
+      await pinSocialService.flagPost(postId, 'Inappropriate content')
+      toast.success('Post reported for review')
+    } catch (error) {
+      toast.error('Failed to report post')
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className={cn("space-y-4", className)}>
+        <div className="animate-pulse space-y-3">
+          {[...Array(3)].map((_, i) => (
+            <div key={i} className="h-24 bg-gray-200 rounded-lg" />
+          ))}
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className={cn("space-y-4", className)}>
+      {/* New Post Form */}
+      {isAuthenticated && (
+        <Card className="">
+          <CardContent className="p-4">
+            <div className="space-y-3">
+              <div className="flex gap-2">
+                {(['comment', 'update', 'question', 'proposal'] as PostType[]).map(type => (
+                  <Button
+                    key={type}
+                    variant={newPostType === type ? 'default' : 'outline'}
+                    size="sm"
+                    onClick={() => setNewPostType(type)}
+                    className="text-xs"
+                  >
+                    {POST_TYPE_LABELS[type]}
+                  </Button>
+                ))}
+              </div>
+              
+              <Textarea
+                placeholder={`Add a ${newPostType}...`}
+                value={newPostContent}
+                onChange={(e) => setNewPostContent(e.target.value)}
+                className="min-h-[80px]"
+              />
+              
+              <div className="flex justify-between items-center">
+                {replyingTo && (
+                  <Button
+                    className=""
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setReplyingTo(null)}
+                  >
+                    Cancel Reply
+                  </Button>
+                )}
+                <div className="flex gap-2 ml-auto">
+                  <Button
+                    className=""
+                    variant="default"
+                    onClick={handleSubmitPost}
+                    disabled={!newPostContent.trim() || submitting}
+                    size="sm"
+                  >
+                    {submitting ? 'Posting...' : 'Post'}
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Posts List */}
+      <div className="space-y-4">
+        {posts.length === 0 ? (
+          <Card className="">
+            <CardContent className="p-8 text-center">
+              <MessageCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No discussion yet</h3>
+              <p className="text-gray-500">
+                {isAuthenticated 
+                  ? "Be the first to start the conversation!"
+                  : "Sign in to join the discussion."
+                }
+              </p>
+            </CardContent>
+          </Card>
+        ) : (
+          posts.map(post => (
+            <PostItem
+              key={post.id}
+              post={post}
+              onReply={handleReply}
+              onLike={handleLike}
+              onFlag={handleFlag}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  )
+}

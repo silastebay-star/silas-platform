@@ -11,5 +11,21 @@
         }
       ]
     }
-  ]
+  ],
+  "redirects": [
+    {
+      "source": "/",
+      "destination": "/map",
+      "permanent": true
+    }
+  ],
+  "functions": {
+    "api/**": {
+      "memory": 1024, // Increase memory for API routes if needed
+      "maxDuration": 10 // Increase timeout for API routes if needed
+    }
+  }
+  // Environment Variables: Manage sensitive environment variables directly in Vercel's dashboard.
+  // Do NOT commit sensitive keys to your repository.
+  // Example: NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY, NEXT_PUBLIC_MAPBOX_TOKEN
 }

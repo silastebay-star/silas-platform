@@ -1,0 +1,389 @@
+/**
+ * Pin Voting Component
+ * Handles community voting and decision-making for pins
+ */
+
+'use client'
+
+import { useState, useEffect } from 'react'
+import { ThumbsUp, ThumbsDown, Minus, TrendingUp, TrendingDown, Users, MessageSquare } from 'lucide-react'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Progress } from '@/components/ui/progress'
+import { Badge } from '@/components/ui/badge'
+import { Textarea } from '@/components/ui/textarea'
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
+import { useAuth } from '@/lib/auth/auth-context'
+import pinSocialService, { VoteType, PinVote } from '@/lib/services/pin-social-service'
+import { toast } from 'sonner'
+import { cn } from '@/lib/utils'
+
+interface PinVotingProps {
+  pinId: string
+  votingEnabled?: boolean
+  className?: string
+}
+
+interface VoteOption {
+  type: VoteType
+  label: string
+  description: string
+  icon: React.ReactNode
+  color: string
+  bgColor: string
+}
+
+const VOTE_OPTIONS: VoteOption[] = [
+  {
+    type: 'support',
+    label: 'Support',
+    description: 'I support this initiative',
+    icon: <ThumbsUp className="h-4 w-4" />,
+    color: 'text-green-600',
+    bgColor: 'bg-green-50 hover:bg-green-100'
+  },
+  {
+    type: 'oppose',
+    label: 'Oppose',
+    description: 'I oppose this initiative',
+    icon: <ThumbsDown className="h-4 w-4" />,
+    color: 'text-red-600',
+    bgColor: 'bg-red-50 hover:bg-red-100'
+  },
+  {
+    type: 'abstain',
+    label: 'Abstain',
+    description: 'I abstain from voting',
+    icon: <Minus className="h-4 w-4" />,
+    color: 'text-gray-600',
+    bgColor: 'bg-gray-50 hover:bg-gray-100'
+  },
+  {
+    type: 'priority_high',
+    label: 'High Priority',
+    description: 'This should be prioritized',
+    icon: <TrendingUp className="h-4 w-4" />,
+    color: 'text-orange-600',
+    bgColor: 'bg-orange-50 hover:bg-orange-100'
+  },
+  {
+    type: 'priority_low',
+    label: 'Low Priority',
+    description: 'This can wait',
+    icon: <TrendingDown className="h-4 w-4" />,
+    color: 'text-blue-600',
+    bgColor: 'bg-blue-50 hover:bg-blue-100'
+  }
+]
+
+export default function PinVoting({ pinId, votingEnabled = true, className }: PinVotingProps) {
+  const [votes, setVotes] = useState<PinVote[]>([])
+  const [voteSummary, setVoteSummary] = useState<Record<VoteType, number>>({
+    support: 0,
+    oppose: 0,
+    abstain: 0,
+    priority_high: 0,
+    priority_low: 0
+  })
+  const [userVotes, setUserVotes] = useState<Set<VoteType>>(new Set())
+  const [totalVotes, setTotalVotes] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [showVoteDialog, setShowVoteDialog] = useState(false)
+  const [selectedVoteType, setSelectedVoteType] = useState<VoteType | null>(null)
+  const [voteComment, setVoteComment] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+
+  const { user, isAuthenticated } = useAuth()
+
+  useEffect(() => {
+    loadVotes()
+  }, [pinId])
+
+  const loadVotes = async () => {
+    try {
+      setLoading(true)
+      
+      // Load vote summary
+      const { summary, total } = await pinSocialService.getVoteSummary(pinId)
+      setVoteSummary(summary)
+      setTotalVotes(total)
+
+      // Load user's votes if authenticated
+      if (isAuthenticated && user) {
+        const { votes: userVoteList } = await pinSocialService.getVotes({
+          pin_id: pinId,
+          user_id: user.id
+        })
+        setUserVotes(new Set(userVoteList.map(v => v.vote_type)))
+      }
+
+      // Load recent votes for display
+      const { votes: recentVotes } = await pinSocialService.getVotes({
+        pin_id: pinId
+      }, { limit: 10 })
+      setVotes(recentVotes)
+    } catch (error) {
+      console.error('Error loading votes:', error)
+      toast.error('Failed to load voting data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleVote = async (voteType: VoteType, comment?: string) => {
+    if (!isAuthenticated) {
+      toast.error('Please sign in to vote')
+      return
+    }
+
+    try {
+      setSubmitting(true)
+      
+      if (userVotes.has(voteType)) {
+        // Remove vote
+        await pinSocialService.removeVote(pinId, voteType)
+        setUserVotes(prev => {
+          const newSet = new Set(prev)
+          newSet.delete(voteType)
+          return newSet
+        })
+        setVoteSummary(prev => ({
+          ...prev,
+          [voteType]: Math.max(0, prev[voteType] - 1)
+        }))
+        setTotalVotes(prev => Math.max(0, prev - 1))
+        toast.success('Vote removed')
+      } else {
+        // Cast vote
+        await pinSocialService.castVote({
+          pin_id: pinId,
+          vote_type: voteType,
+          comment
+        })
+        setUserVotes(prev => new Set([...prev, voteType]))
+        setVoteSummary(prev => ({
+          ...prev,
+          [voteType]: prev[voteType] + 1
+        }))
+        setTotalVotes(prev => prev + 1)
+        toast.success('Vote cast successfully')
+      }
+
+      setShowVoteDialog(false)
+      setVoteComment('')
+      setSelectedVoteType(null)
+    } catch (error) {
+      console.error('Error voting:', error)
+      toast.error('Failed to cast vote')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const openVoteDialog = (voteType: VoteType) => {
+    setSelectedVoteType(voteType)
+    setShowVoteDialog(true)
+  }
+
+  const getVotePercentage = (voteType: VoteType) => {
+    if (totalVotes === 0) return 0
+    return Math.round((voteSummary[voteType] / totalVotes) * 100)
+  }
+
+  const getVoteOption = (voteType: VoteType) => {
+    return VOTE_OPTIONS.find(option => option.type === voteType)!
+  }
+
+  if (!votingEnabled) {
+    return null
+  }
+
+  if (loading) {
+    return (
+      <Card className={className}>
+        <CardContent className="p-4">
+          <div className="animate-pulse space-y-3">
+            <div className="h-4 bg-gray-200 rounded w-1/3" />
+            <div className="space-y-2">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-8 bg-gray-200 rounded" />
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <Card className={className}>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg flex items-center gap-2">
+          <Users className="h-5 w-5" />
+          Community Voting
+          <Badge variant="secondary" className="ml-auto">
+            {totalVotes} {totalVotes === 1 ? 'vote' : 'votes'}
+          </Badge>
+        </CardTitle>
+      </CardHeader>
+      
+      <CardContent className="space-y-4">
+        {/* Vote Options */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {VOTE_OPTIONS.map(option => {
+            const hasVoted = userVotes.has(option.type)
+            const voteCount = voteSummary[option.type]
+            const percentage = getVotePercentage(option.type)
+            
+            return (
+              <div key={option.type} className="space-y-2">
+                <Button
+                  variant="outline"
+                  size="default"
+                  onClick={() => openVoteDialog(option.type)}
+                  disabled={!isAuthenticated}
+                  className={cn(
+                    "w-full justify-start h-auto p-3 transition-all",
+                    option.bgColor,
+                    hasVoted && "ring-2 ring-offset-2",
+                    hasVoted && option.color.replace('text-', 'ring-')
+                  )}
+                >
+                  <div className="flex items-center gap-3 w-full">
+                    <div className={cn("flex-shrink-0", option.color)}>
+                      {option.icon}
+                    </div>
+                    <div className="flex-1 text-left">
+                      <div className="font-medium text-sm">{option.label}</div>
+                      <div className="text-xs text-gray-500">{option.description}</div>
+                    </div>
+                    <div className="flex-shrink-0 text-right">
+                      <div className="font-medium text-sm">{voteCount}</div>
+                      <div className="text-xs text-gray-500">{percentage}%</div>
+                    </div>
+                  </div>
+                </Button>
+                
+                {voteCount > 0 && (
+                  <Progress 
+                    value={percentage} 
+                    className="h-1"
+                  />
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Recent Voters */}
+        {votes.length > 0 && (
+          <div className="pt-4 border-t">
+            <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Recent Votes
+            </h4>
+            <div className="space-y-2 max-h-32 overflow-y-auto">
+              {votes.slice(0, 5).map(vote => {
+                const option = getVoteOption(vote.vote_type)
+                return (
+                  <div key={vote.id} className="flex items-center gap-2 text-sm">
+                    <div className={cn("flex-shrink-0", option.color)}>
+                      {option.icon}
+                    </div>
+                    <span className="font-medium">
+                      {vote.user?.display_name || 'Anonymous'}
+                    </span>
+                    <span className="text-gray-500">voted</span>
+                    <span className={option.color}>{option.label}</span>
+                    {vote.comment && (
+                      <span className="text-gray-400 truncate">
+                        - "{vote.comment}"
+                      </span>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {!isAuthenticated && (
+          <div className="text-center py-4 text-sm text-gray-500">
+            Sign in to participate in community voting
+          </div>
+        )}
+      </CardContent>
+
+      {/* Vote Dialog */}
+      <Dialog open={showVoteDialog} onOpenChange={setShowVoteDialog}>
+        <DialogContent className="">
+          <DialogHeader className="">
+            <DialogTitle className="">
+              {selectedVoteType && (
+                <>
+                  {getVoteOption(selectedVoteType).label} Vote
+                </>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {selectedVoteType && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                <div className={cn("flex-shrink-0", getVoteOption(selectedVoteType).color)}>
+                  {getVoteOption(selectedVoteType).icon}
+                </div>
+                <div>
+                  <div className="font-medium">{getVoteOption(selectedVoteType).label}</div>
+                  <div className="text-sm text-gray-600">
+                    {getVoteOption(selectedVoteType).description}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Comment (optional)
+                </label>
+                <Textarea
+                  placeholder="Share your thoughts on this vote..."
+                  value={voteComment}
+                  onChange={(e) => setVoteComment(e.target.value)}
+                  className="min-h-[80px]"
+                />
+              </div>
+
+              <div className="flex gap-2 justify-end">
+                <Button
+                  className=""
+                  variant="outline"
+                  size="default"
+                  onClick={() => setShowVoteDialog(false)}
+                  disabled={submitting}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  size="default"
+                  onClick={() => handleVote(selectedVoteType, voteComment)}
+                  disabled={submitting}
+                  className={cn(
+                    userVotes.has(selectedVoteType) && "bg-red-600 hover:bg-red-700"
+                  )}
+                >
+                  {submitting 
+                    ? 'Processing...' 
+                    : userVotes.has(selectedVoteType) 
+                      ? 'Remove Vote' 
+                      : 'Cast Vote'
+                  }
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </Card>
+  )
+}

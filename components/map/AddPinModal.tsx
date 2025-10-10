@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { X, MapPin, Camera } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { X, MapPin, Camera, AlertTriangle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -9,26 +9,41 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import ImageUpload from '@/components/ImageUpload'
 import { CATEGORIES, CategoryKey } from '@/config/categories'
+import { validatePinLocation } from '@/lib/boundary-utils'
 
 interface AddPinModalProps {
   isOpen: boolean
   onClose: () => void
   onSubmit: (pinData: any) => void
   location: { lat: number; lng: number } | null
+  authorId: string // New prop for author ID
 }
 
 // Use the CATEGORIES from config instead of hardcoded PIN_TYPES
 
-export default function AddPinModal({ isOpen, onClose, onSubmit, location }: AddPinModalProps) {
+export default function AddPinModal({ isOpen, onClose, onSubmit, location, authorId }: AddPinModalProps) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    type: 'community' as CategoryKey,
-    category: '',
-    photos: [] as string[]
+    category: 'groups' as CategoryKey, // Default to 'groups'
+    photos: [] as string[],
+    metadata: {} as Record<string, any> // For category-specific data
   })
 
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [boundaryValidation, setBoundaryValidation] = useState<{
+    isValid: boolean
+    message?: string
+    suggestedLocation?: [number, number]
+  } | null>(null)
+
+  // Validate location when modal opens or location changes
+  useEffect(() => {
+    if (location) {
+      const validation = validatePinLocation(location.lng, location.lat)
+      setBoundaryValidation(validation)
+    }
+  }, [location])
 
   if (!isOpen || !location) return null
 
@@ -43,13 +58,20 @@ export default function AddPinModal({ isOpen, onClose, onSubmit, location }: Add
     setIsSubmitting(true)
     
     try {
-      await onSubmit(formData)
+      const pinData = {
+        ...formData,
+        categories: [formData.category],
+        lat: location.lat,
+        lng: location.lng,
+        metadata: formData.metadata // Include metadata
+      };
+      await onSubmit(pinData)
       setFormData({
         title: '',
         description: '',
-        type: 'community',
-        category: '',
-        photos: []
+        category: 'groups',
+        photos: [],
+        metadata: {}
       })
     } catch (error) {
       console.error('Error adding pin:', error)
@@ -58,18 +80,7 @@ export default function AddPinModal({ isOpen, onClose, onSubmit, location }: Add
     }
   }
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files
-    if (!files) return
 
-    // In a real app, you'd upload to Supabase Storage here
-    // For now, we'll just simulate it
-    const photoUrls = Array.from(files).map(file => URL.createObjectURL(file))
-    setFormData(prev => ({
-      ...prev,
-      photos: [...prev.photos, ...photoUrls]
-    }))
-  }
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -95,6 +106,24 @@ export default function AddPinModal({ isOpen, onClose, onSubmit, location }: Add
           </p>
         </div>
 
+        {/* Boundary validation feedback */}
+        {boundaryValidation && !boundaryValidation.isValid && (
+          <div className="mx-6 mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+            <div className="flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-red-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-red-700">
+                <p className="font-medium">Location Outside Boundary</p>
+                <p className="mt-1">{boundaryValidation.message}</p>
+                {boundaryValidation.suggestedLocation && (
+                  <p className="mt-2 text-xs">
+                    Suggested location: {boundaryValidation.suggestedLocation[1].toFixed(6)}, {boundaryValidation.suggestedLocation[0].toFixed(6)}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
           {/* Title */}
@@ -111,18 +140,18 @@ export default function AddPinModal({ isOpen, onClose, onSubmit, location }: Add
             />
           </div>
 
-          {/* Type */}
+          {/* Category */}
           <div>
-            <Label htmlFor="type">Pin Type *</Label>
+            <Label htmlFor="category">Category *</Label>
             <Select
-              value={formData.type}
-              onValueChange={(value: CategoryKey) => setFormData(prev => ({ ...prev, type: value }))}
+              value={formData.category}
+              onValueChange={(value: CategoryKey) => setFormData(prev => ({ ...prev, category: value, metadata: {} }))} // Reset metadata on category change
             >
               <SelectTrigger className="mt-1">
                 <SelectValue placeholder="Select pin type" />
               </SelectTrigger>
               <SelectContent>
-                {CATEGORIES.filter(cat => cat.key !== 'issues').map((category) => (
+                {CATEGORIES.map((category) => (
                   <SelectItem key={category.key} value={category.key}>
                     <div className="flex items-center space-x-2">
                       <div
@@ -138,6 +167,28 @@ export default function AddPinModal({ isOpen, onClose, onSubmit, location }: Add
             </Select>
           </div>
 
+          {/* Environmental Pin Type (Conditional) */}
+          {formData.category === 'environment' && (
+            <div>
+              <Label htmlFor="environmentalPinType">Environmental Pin Type *</Label>
+              <Select
+                value={formData.metadata.environmentalPinType || ''}
+                onValueChange={(value: string) => setFormData(prev => ({ ...prev, metadata: { ...prev.metadata, environmentalPinType: value } }))}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Select environmental pin type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="habitat_site">Habitat Site</SelectItem>
+                  <SelectItem value="canal_project">Canal Project</SelectItem>
+                  <SelectItem value="tree_green_patch">Tree / Green Patch</SelectItem>
+                  <SelectItem value="pollution_litter_report">Pollution / Litter Report</SelectItem>
+                  <SelectItem value="community_garden">Community Garden</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+
           {/* Description */}
           <div>
             <Label htmlFor="description">Description</Label>
@@ -151,18 +202,7 @@ export default function AddPinModal({ isOpen, onClose, onSubmit, location }: Add
             />
           </div>
 
-          {/* Category */}
-          <div>
-            <Label htmlFor="category">Category (Optional)</Label>
-            <Input
-              id="category"
-              type="text"
-              value={formData.category}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFormData(prev => ({ ...prev, category: e.target.value }))}
-              placeholder="e.g., Restaurant, Park, School..."
-              className="mt-1"
-            />
-          </div>
+
 
           {/* Photos */}
           <div>
@@ -173,6 +213,7 @@ export default function AddPinModal({ isOpen, onClose, onSubmit, location }: Add
                 existingImages={formData.photos}
                 maxImages={5}
                 disabled={isSubmitting}
+                authorId={authorId} // Pass authorId to ImageUpload
               />
             </div>
             <p className="text-xs text-gray-500 mt-1">
@@ -180,53 +221,7 @@ export default function AddPinModal({ isOpen, onClose, onSubmit, location }: Add
             </p>
           </div>
 
-          {/* Photo Upload */}
-          <div>
-            <Label htmlFor="photos">Photos (Optional)</Label>
-            <div className="mt-1">
-              <label className="flex items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer hover:bg-gray-50">
-                <div className="flex flex-col items-center">
-                  <Camera className="w-8 h-8 text-gray-400 mb-2" />
-                  <p className="text-sm text-gray-600">Click to upload photos</p>
-                  <p className="text-xs text-gray-400">PNG, JPG up to 10MB</p>
-                </div>
-                <input
-                  type="file"
-                  multiple
-                  accept="image/*"
-                  onChange={handlePhotoUpload}
-                  className="hidden"
-                />
-              </label>
-            </div>
 
-            {/* Photo Preview */}
-            {formData.photos.length > 0 && (
-              <div className="mt-2 grid grid-cols-3 gap-2">
-                {formData.photos.map((photo, index) => (
-                  <div key={index} className="relative">
-                    <img
-                      src={photo}
-                      alt={`Upload ${index + 1}`}
-                      className="w-full h-20 object-cover rounded"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setFormData(prev => ({
-                          ...prev,
-                          photos: prev.photos.filter((_, i) => i !== index)
-                        }))
-                      }}
-                      className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs"
-                    >
-                      ×
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
 
           {/* Actions */}
           <div className="flex space-x-3 pt-4">
@@ -245,7 +240,7 @@ export default function AddPinModal({ isOpen, onClose, onSubmit, location }: Add
               variant="default"
               size="default"
               className="flex-1 bg-silas-green hover:bg-silas-green/90"
-              disabled={isSubmitting}
+              disabled={isSubmitting || (boundaryValidation && !boundaryValidation.isValid)}
             >
               {isSubmitting ? (
                 <div className="flex items-center space-x-2">

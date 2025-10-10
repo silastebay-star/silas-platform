@@ -53,7 +53,7 @@ SILAS is a production-ready, modular community platform designed for Stoneclough
 
 | Layer | Technology | Purpose |
 |-------|------------|---------|
-| **Frontend** | React 18 + Vite + TypeScript | Modern, fast development |
+| **Frontend** | React 19 + Next.js + TypeScript | Modern, fast development |
 | **Styling** | Tailwind CSS + Shadcn/UI | Consistent, responsive design |
 | **Backend** | Supabase (PostgreSQL + PostGIS) | Real-time database with spatial data |
 | **Maps** | Mapbox GL JS | Interactive mapping |
@@ -93,14 +93,15 @@ Create `.env.local` with your credentials:
 
 ```env
 # Supabase Configuration
-VITE_SUPABASE_URL=your_supabase_project_url
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
 # Optional: Mapbox for enhanced mapping
-VITE_MAPBOX_ACCESS_TOKEN=your_mapbox_token
+NEXT_PUBLIC_MAPBOX_TOKEN=your_mapbox_token
+NEXT_PUBLIC_MAPBOX_STYLE=your_mapbox_style
 
 # Optional: Stripe for community fund
-VITE_STRIPE_PUBLISHABLE_KEY=your_stripe_key
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=your_stripe_key
 ```
 
 ## 📁 Project Structure
