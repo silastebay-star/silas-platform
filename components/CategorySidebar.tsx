@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { CATEGORIES, CategoryKey } from '@/config/categories'
-import { MapPin, Users, Heart, Hammer, Briefcase, Calendar, BarChart3, AlertTriangle } from 'lucide-react'
+import { MapPin, Users, Heart, Hammer, Briefcase, Calendar, BarChart3, AlertTriangle, Leaf, Shield } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const categoryIcons = {
@@ -12,6 +12,8 @@ const categoryIcons = {
   economy: Briefcase,
   events: Calendar,
   data_ai: BarChart3,
+  environment: Leaf,
+  safety: Shield,
   issues: AlertTriangle
 }
 
@@ -54,7 +56,7 @@ export default function CategorySidebar({ active, onSelect, className }: Categor
               className={cn(
                 'flex items-start gap-3 p-3 rounded-lg hover:bg-white/5 transition-all duration-200 text-left group',
                 isActive && 'bg-white/10 ring-2 ring-offset-2 ring-offset-slate-900',
-                category.key === 'issues' && 'border-t border-slate-700 mt-2 pt-4'
+                category.key === 'safety' && 'border-t border-slate-700 mt-2 pt-4'
               )}
               style={{
                 '--ring-color': isActive ? category.color : undefined

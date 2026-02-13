@@ -1,11 +1,17 @@
 export type CategoryKey =
-  | 'community'
-  | 'faith'
+  | 'groups'
   | 'projects'
+  | 'culture'
   | 'economy'
-  | 'events'
+  | 'environment'
+  | 'safety'
+  | 'faith'
   | 'data_ai'
-  | 'issues'; // issues is an overlay
+  | 'issues'
+  | 'infrastructure'
+  | 'education'
+  | 'governance'
+  | 'housing';
 
 export interface Category {
   key: CategoryKey;
@@ -20,34 +26,33 @@ export interface Category {
 
 export const CATEGORIES: Category[] = [
   {
-    key: 'community',
-    label: 'Community & Groups',
-    description: 'Groups, clubs and membership hubs',
-    purpose: 'Build unity, belonging, and shared purpose. The foundation of the SILAS ecosystem — for churches, local clubs, volunteer groups, and civic organizations.',
+    key: 'groups',
+    label: 'Groups & Collectives',
+    description: 'Open community collectives for action.',
+    purpose: 'Organize into open collectives to launch projects, add pins, and host events. The engine of community action.',
     color: '#6B8E6B',
     accent: '#4C764C',
     icon: '👥',
     features: [
       'Group Pages (profiles, member lists, posts)',
-      'Local Boards & Forums',
-      'Join/Follow/Message',
-      'Shared projects & announcements'
+      'Public membership lists',
+      'Transparent polls for group decisions',
+      'Activity dashboards and goal tracking'
     ]
   },
   {
-    key: 'faith',
-    label: 'Faith & Reflection',
-    description: 'Services, chaplaincy, reflections',
-    purpose: 'Provide a moral and cultural framework — open to all but grounded in biblical wisdom expressed in universal language. Focuses on inner life, reflection, meaning, and collective direction.',
-    color: '#3A5D3A',
-    accent: '#2F5C2F',
-    icon: '🙏',
+    key: 'housing',
+    label: 'Housing & Community Life',
+    description: 'Resident welfare and neighborhood support.',
+    purpose: 'Support shared housing projects, co-ops, neighborhood watch, and resident welfare.',
+    color: '#F97316',
+    accent: '#EA580C',
+    icon: '🏠',
     features: [
-      'Reflection Cards / Daily Wisdom',
-      'Service Schedules (for local parishes)',
-      'Scripture-inspired essays (secular tone)',
-      'Chaplaincy & Well-being support directory',
-      'AI Reflection Assistant (secular but biblically aligned tone)'
+      'Resident Registry',
+      'Neighborhood Feeds by street/block',
+      'Geo-notified Security Alerts',
+      'Shared Community Calendar'
     ]
   },
   {
@@ -67,6 +72,22 @@ export const CATEGORIES: Category[] = [
     ]
   },
   {
+    key: 'culture',
+    label: 'Arts & Culture',
+    description: 'Creative expression and cultural identity.',
+    purpose: 'Preserve and amplify cultural identity and creative expression.',
+    color: '#A855F7',
+    accent: '#9333EA',
+    icon: '🎨',
+    features: [
+      'Event Calendar with RSVP',
+      'Story Maps for historical overlays',
+      'Cultural project voting',
+      'Local artist network',
+      'Public media archive'
+    ]
+  },
+  {
     key: 'economy',
     label: 'Economy & Commerce',
     description: 'Local businesses, marketplaces',
@@ -83,19 +104,97 @@ export const CATEGORIES: Category[] = [
     ]
   },
   {
-    key: 'events',
-    label: 'Events & Experiences',
-    description: 'Community events & booking',
-    purpose: 'Celebrate local life and participation. Central calendar for community, culture, and civic gatherings.',
-    color: '#8CBFA5',
-    accent: '#7DAA95',
-    icon: '📅',
+    key: 'environment',
+    label: 'Environment & Wildlife',
+    description: 'Environmental protection & wildlife conservation',
+    purpose: 'Protect and enhance our natural environment. Monitor local ecosystems, coordinate conservation efforts, and promote sustainable practices.',
+    color: '#059669',
+    accent: '#047857',
+    icon: '🌿',
     features: [
-      'Interactive Map Calendar',
-      'RSVP & ticketing via Stripe integration',
-      'Event Pins (visible to all users)',
-      'Media galleries and story recaps',
-      'AI Event Assistant (auto-generate posts and posters)'
+      'Wildlife Monitoring & Reporting',
+      'Environmental Impact Tracking',
+      'Conservation Project Coordination',
+      'Pollution & Hazard Reporting',
+      'AI Environmental Analyst (ecosystem health insights)'
+    ]
+  },
+  {
+    key: 'safety',
+    label: 'Safety & Response',
+    description: 'Emergency response & community safety',
+    purpose: 'Ensure community safety and emergency preparedness. Coordinate rapid response to incidents, maintain safety infrastructure, and build resilient communities.',
+    color: '#DC2626',
+    accent: '#B91C1C',
+    icon: '🚨',
+    features: [
+      'Emergency Alert System',
+      'Incident Reporting & Tracking',
+      'Emergency Services Coordination',
+      'Safety Infrastructure Monitoring',
+      'AI Risk Assessment (predictive safety analytics)'
+    ]
+  },
+  {
+    key: 'faith',
+    label: 'Faith & Reflection',
+    description: 'Services, chaplaincy, reflections',
+    purpose: 'Provide a moral and cultural framework — open to all but grounded in biblical wisdom expressed in universal language. Focuses on inner life, reflection, meaning, and collective direction.',
+    color: '#3A5D3A',
+    accent: '#2F5C2F',
+    icon: '🙏',
+    features: [
+      'Reflection Cards / Daily Wisdom',
+      'Service Schedules (for local parishes)',
+      'Scripture-inspired essays (secular tone)',
+      'Chaplaincy & Well-being support directory',
+      'AI Reflection Assistant (secular but biblically aligned tone)'
+    ]
+  },
+  {
+    key: 'infrastructure',
+    label: 'Infrastructure & Planning',
+    description: 'Track, propose, and discuss infrastructure projects.',
+    purpose: 'Empower citizens to track, propose, and discuss local infrastructure improvements.',
+    color: '#64748B',
+    accent: '#475569',
+    icon: '🔧',
+    features: [
+      'Proposal Voting',
+      'Funding Requests',
+      'Progress Tracker',
+      'Public Comments',
+      'Census Integration'
+    ]
+  },
+  {
+    key: 'education',
+    label: 'Education & Skills',
+    description: 'Community learning and development.',
+    purpose: 'Enable collaboration between schools, students, and community education initiatives.',
+    color: '#3B82F6',
+    accent: '#2563EB',
+    icon: '🎓',
+    features: [
+      'Learning Hub',
+      'Mentorship Network',
+      'Skill Badge System',
+      'Project API for school data'
+    ]
+  },
+  {
+    key: 'governance',
+    label: 'Governance & Democracy',
+    description: 'Transparent decision-making for the community.',
+    purpose: 'Provide transparent, decentralized decision-making at every level.',
+    color: '#4F46E5',
+    accent: '#4338CA',
+    icon: '⚖️',
+    features: [
+      'Voting Engine',
+      'Proposal Lifecycle Management',
+      'Transparency Ledger',
+      'Decision Dashboard'
     ]
   },
   {
@@ -104,7 +203,7 @@ export const CATEGORIES: Category[] = [
     description: 'Dashboards, polls, civic analytics',
     purpose: 'Empower decision-making through data transparency. Transforms census data, polls, and platform analytics into actionable insight for governance and community strategy.',
     color: '#5E6E6E',
-    accent: '#D1D5DB',
+    accent: '#4B5563',
     icon: '📊',
     features: [
       'Community Dashboard (Census, fund, engagement)',
@@ -112,21 +211,6 @@ export const CATEGORIES: Category[] = [
       'AI Civic Analyst (localized RAG agent trained on community data)',
       'Project outcomes visualization',
       'Public transparency report'
-    ]
-  },
-  {
-    key: 'issues',
-    label: 'Issues & Response',
-    description: 'Incidents and urgent reports (overlay)',
-    purpose: 'Quick community alerts — disasters, repairs, safety. Special pins for emergency coordination.',
-    color: '#C97340',
-    accent: '#C4511F',
-    icon: '⚠️',
-    features: [
-      '"Issue Pins" with location and photos',
-      'Urgent broadcast messages',
-      'Local authority communication bridge',
-      'Escalation / Resolution tracking'
     ]
   }
 ];
